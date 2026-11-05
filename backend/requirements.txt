@@ -1,0 +1,24 @@
+# Core FastAPI Backend
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+python-multipart>=0.0.9
+httpx>=0.27.0
+python-dotenv>=1.0.1
+
+# Testing
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+
+# Vector Database (Qdrant Cloud)
+qdrant-client>=1.11.0
+
+# Gemini API
+google-genai>=0.1.1
+
+# Document Processing & OCR
+pymupdf>=1.24.0
+python-docx>=1.1.0
+pytesseract>=0.3.10
+
