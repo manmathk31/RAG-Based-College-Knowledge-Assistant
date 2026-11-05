@@ -33,8 +33,9 @@ These technical decisions are locked. AI agents MUST NOT alter, replace, or work
 | **PDF Extraction** | PyMuPDF (`fitz`) | High-speed, robust PDF parsing. |
 | **DOCX Extraction** | `python-docx` | Native XML-based Word document parsing. |
 | **Selective OCR** | Tesseract OCR (`pytesseract`) | Invoked only for scanned PDF pages or pages with minimal selectable text. |
-| **Keyword Retrieval** | In-memory / Qdrant payload text match | Lightweight hybrid retrieval without introducing an external search cluster. |
-| **Relational Database** | None initially | Metadata stored directly in Qdrant payloads. Do not add Postgres/MySQL without documented justification. |
+| **Keyword Retrieval** | Supabase PostgreSQL Full-Text Search | `document_chunks` table with `tsvector`, GIN index, `websearch_to_tsquery` + `ts_rank_cd`. Canonical text fetched from Qdrant (`get_points_by_ids`) to avoid duplicating text in PostgreSQL. |
+| **Relational Database** | Supabase PostgreSQL | Authoritative document registry, versioning, and lifecycle metadata via SQLAlchemy 2.0 (asyncpg) and Alembic. See ADR-003. |
+| **File Storage** | Ephemeral Temporary Files | Uploaded files are processed in-memory / temporary disk streams and deleted immediately. No S3 or permanent object storage. |
 | **Authentication** | Lightweight Admin Secret | No student user accounts or auth flows initially. Admin endpoints protected via header secret. |
 
 ---

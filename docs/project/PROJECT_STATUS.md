@@ -1,7 +1,7 @@
 # Project Status Dashboard
 
 > **Last Updated**: 2026-11-05
-> **Current Phase**: Phase 1 — Foundational Scaffolding & Engineering Architecture
+> **Current Phase**: Phase 5 — Final Backend Completion (Hybrid RAG, Chat API, Frontend Handoff)
 
 ---
 
@@ -15,15 +15,17 @@
 | **Frontend Scaffolds (User & Admin Apps)** | 🟢 COMPLETED | React + TypeScript + Vite + Tailwind CSS setups tested and build successfully |
 | **Hosted Embeddings Service (Hugging Face)** | 🟢 COMPLETED | HuggingFaceEmbeddingService (BAAI/bge-small-en-v1.5, 384 dim), retries & batching tested |
 | **Qdrant Vector Store Integration** | 🟢 COMPLETED | QdrantVectorStore adapter, collection validation, upsert, search, deletion tested |
-| **Document Ingestion Pipeline (PDF/DOCX/OCR)** | ⚪ NOT STARTED | Next Milestone: Extraction, chunking, and metadata preservation |
-| **Storage Abstraction & Job Handling** | ⚪ NOT STARTED | Milestone 5: File persistence and ingestion status lifecycle |
-| **Hybrid Retrieval & RRF Ranking** | ⚪ NOT STARTED | Milestone 6: Dense search + keyword search fusion |
-| **Gemini Generation & Grounded Citations** | ⚪ NOT STARTED | Milestone 7: Grounded prompt engineering and source attribution |
-| **User Chatbot API Endpoints** | ⚪ NOT STARTED | Milestone 8: `/api/v1/chat/query` endpoint |
-| **Admin Document Management API Endpoints** | ⚪ NOT STARTED | Milestone 9: `/api/v1/documents/*` endpoints |
-| **User Chatbot Frontend UI** | ⚪ NOT STARTED | Milestone 10: Conversational interface and citation cards |
-| **Admin Panel Frontend UI** | ⚪ NOT STARTED | Milestone 11: Document upload and status management views |
-| **End-to-End Integration & Deployment** | ⚪ NOT STARTED | Milestone 12: Verification and free-tier deployment configuration |
+| **Document Ingestion Pipeline (PDF/DOCX/OCR)** | 🟢 COMPLETED | Format extractors (PDF, DOCX), selective OCR, and structure-aware chunking verified |
+| **Supabase Metadata & Version Registry** | 🟢 COMPLETED | SQLAlchemy 2.0 (asyncpg), Alembic migrations, documents table with constraints & indexes |
+| **End-to-End Document Ingestion Orchestrator** | 🟢 COMPLETED | Staged upload streaming, magic bytes check, exact deduplication, versioning & rollbacks |
+| **Admin Document Management API Endpoints** | 🟢 COMPLETED | `/api/v1/documents/*` (upload, list, detail, retry, delete) with admin secret protection |
+| **Hybrid Retrieval & RRF Ranking** | 🟢 COMPLETED | Dense vector similarity (Qdrant) + full-text search (Supabase tsvector) fused via RRF (k=60) |
+| **Gemini Generation & Grounded Citations** | 🟢 COMPLETED | Google Gemini 2.5 Flash via official `google-genai` SDK with strict grounding & [1], [2] citations |
+| **User Chatbot API Endpoints** | 🟢 COMPLETED | `POST /api/v1/chat` and `POST /api/v1/chat/query` with graceful degradation and robust fallbacks |
+| **Frontend API Integration Guide** | 🟢 COMPLETED | Comprehensive 14-section handoff document at `docs/frontend/API_INTEGRATION_GUIDE.md` |
+| **User Chatbot Frontend UI** | ⚪ NOT STARTED | Ready for frontend teammate: chat interface, markdown rendering, citation pills/drawer |
+| **Admin Panel Frontend UI** | ⚪ NOT STARTED | Ready for frontend teammate: upload widget, document data table, version badges, retry action |
+| **End-to-End Integration & Deployment** | ⚪ NOT STARTED | Verification and free-tier deployment configuration |
 
 ---
 
@@ -31,12 +33,12 @@
 
 - 🟢 **COMPLETED**: Fully implemented, validated, and documented.
 - 🟡 **IN PROGRESS**: Active implementation currently being verified.
-- ⚪ **NOT STARTED**: Scheduled in the roadmap; no code written yet.
+- ⚪ **NOT STARTED**: Scheduled in the roadmap; ready for execution.
 - 🔴 **BLOCKED**: Implementation cannot proceed due to external dependency or missing decision.
 
 ---
 
 ## 3. Current Focus & Immediate Next Actions
 
-- **Current Phase**: Milestone 2 (Hosted Embeddings & Qdrant Vector Store) completed and validated.
-- **Immediate Next Task**: Document Ingestion Pipeline — format extractors (PyMuPDF, python-docx), selective OCR (Tesseract), and structure-aware chunking.
+- **Current Phase**: Milestone 5 (Final Backend Completion: Hybrid RAG, Chat API and Frontend Handoff) completed and validated with 96 passing backend unit/integration tests and benchmark evaluation.
+- **Immediate Next Task**: Frontend teammate begins UI development for User Chatbot (`frontend/user-app`) and Admin Panel (`frontend/admin-app`) using `docs/frontend/API_INTEGRATION_GUIDE.md`.

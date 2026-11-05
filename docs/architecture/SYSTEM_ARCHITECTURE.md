@@ -23,19 +23,20 @@ flowchart TD
 
     subgraph BackendServices ["Application Services Tier"]
         IngestionSvc["Ingestion Pipeline Service<br/>(PyMuPDF / docx / Tesseract OCR)"]
+        Orchestrator["Ingestion Orchestrator<br/>(Lifecycle, Deduplication, Compensating Rollback)"]
         RetrievalSvc["Hybrid Retrieval Service<br/>(Dense Vectors + Keyword Search + RRF)"]
         GenerationSvc["Generation Service<br/>(Grounded Prompting + Source Attribution)"]
-        StorageSvc["Storage Abstraction Layer<br/>(File Storage Interface)"]
     end
 
     subgraph ExternalServices ["External Cloud Services Tier"]
+        SupabaseDB[("Supabase PostgreSQL<br/>(Metadata Registry & GIN tsvector)")]
         HFEmbed["Hugging Face Inference Providers<br/>(BAAI/bge-small-en-v1.5, 384-dim)"]
-        GeminiGen["Google Gemini API<br/>(gemini-2.5-flash - Planned M7)"]
+        GeminiGen["Google Gemini API<br/>(gemini-2.5-flash via google-genai)"]
         QdrantCloud[("Qdrant Cloud<br/>(Persistent Vectors & Payloads)")]
     end
 
     UserApp -->|POST /chat/query| CORS
-    AdminApp -->|POST /documents/upload| CORS
+    AdminApp -->|POST /documents| CORS
     CORS --> AuthMiddleware
     AuthMiddleware --> RouterIngest
     CORS --> RouterChat
@@ -43,12 +44,13 @@ flowchart TD
 
     RouterChat --> RetrievalSvc
     RouterChat --> GenerationSvc
-    RouterIngest --> IngestionSvc
+    RouterIngest --> Orchestrator
 
-    IngestionSvc --> StorageSvc
-    IngestionSvc --> HFEmbed
-    HFEmbed --> IngestionSvc
-    IngestionSvc --> QdrantCloud
+    Orchestrator --> IngestionSvc
+    Orchestrator --> SupabaseDB
+    Orchestrator --> HFEmbed
+    HFEmbed --> Orchestrator
+    Orchestrator --> QdrantCloud
 
     RetrievalSvc --> HFEmbed
     RetrievalSvc --> QdrantCloud
@@ -107,8 +109,14 @@ flowchart TD
   - The adapter gracefully handles cold starts with backoff retries.
   - The service is not permanently unlimited; dedicated Inference Endpoints or Pro subscriptions are recommended for high-volume production deployments.
 
-### 2.6 External LLM Tier (`Google Gemini API` - Planned Milestone 7)
-- **Answer Generation**: `gemini-2.5-flash` for fast, cost-effective generation adhering to strict context-grounding prompts. (Not implemented in Milestone 2).
+### 2.6 External LLM Tier (`Google Gemini API`)
+- **Answer Generation**: `gemini-2.5-flash` using official `google-genai` client for fast, strictly grounded generation adhering to strict context attribution prompts.
+- **Grounding Instructions**: The model is instructed to attribute claims to sources using `[1]`, `[2]` notation, refuse outside domain knowledge, and output an honest disclosure when provided context is insufficient.
+- **Resilience**: Managed with bounded exponential retries with jitter via `tenacity` on HTTP 429 and 503 errors.
+
+### 2.7 Supabase PostgreSQL Relational Tier
+- **Authoritative Registry**: Manages document metadata, version history, content hashes, and processing statuses.
+- **Full-Text Inverted Indexing**: The `document_chunks` table indexes tokenized chunk text as PostgreSQL `TSVECTOR` with a GIN index, enabling fast keyword queries via `websearch_to_tsquery` without duplicating chunk text in the database (canonical text remains in Qdrant).
 
 ---
 

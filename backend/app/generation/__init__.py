@@ -1,8 +1,9 @@
-"""Grounded answer generation package.
+"""Generation package: abstract base and Gemini implementation."""
 
-Planned responsibilities (Milestone 7):
-- Gemini 2.5 Flash grounded prompt construction.
-- Strict context-grounding enforcement to eliminate hallucinations.
-- Source citation structuring with document name and page numbers.
-"""
+from app.generation.base import BaseGenerationService
+from app.generation.gemini import GeminiGenerationService
 
+__all__ = [
+    "BaseGenerationService",
+    "GeminiGenerationService",
+]

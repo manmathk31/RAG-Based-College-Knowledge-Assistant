@@ -61,21 +61,26 @@ Copy-Item .env.example .env
 ```
 
 ### Required Configuration Values:
-1. **Hugging Face Inference Providers (Embeddings)**:
+1. **Supabase PostgreSQL (Authoritative Metadata Database)**:
+   - Create a project on [Supabase](https://supabase.com/).
+   - Obtain your PostgreSQL connection string from Database Settings.
+   - Set `DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres` (or transaction pooler on port 6543).
+   - Apply schema migrations: `alembic upgrade head`.
+2. **Hugging Face Inference Providers (Embeddings)**:
    - Create a free account on [Hugging Face](https://huggingface.co/).
    - Generate an Access Token (Read permissions) under [Settings > Access Tokens](https://huggingface.co/settings/tokens).
    - Set `HF_TOKEN=hf_your_token_here`.
    - Default model: `EMBEDDING_MODEL=BAAI/bge-small-en-v1.5` (dimension: `384`).
-2. **Qdrant Cloud (Vector Database)**:
+3. **Qdrant Cloud (Vector Database)**:
    - Create a free cluster on [Qdrant Cloud Console](https://cloud.qdrant.io/).
    - Obtain your cluster URL and API key.
    - Set `QDRANT_URL=https://<cluster-id>.<region>.gcp.cloud.qdrant.io:6333`.
    - Set `QDRANT_API_KEY=your_qdrant_key`.
    - Set `QDRANT_COLLECTION_NAME=college_knowledge_base`.
-3. **Google Gemini API (Answer Generation - Planned Milestone 7)**:
+4. **Google Gemini API (Answer Generation - Planned Milestone 7)**:
    - Obtain a key from [Google AI Studio](https://aistudio.google.com/).
    - Set `GEMINI_API_KEY=your_actual_key`.
-4. **Admin Protection**:
+5. **Admin Protection**:
    - Set `ADMIN_API_SECRET=your_custom_admin_token` (used in request headers to protect administrative uploads).
 
 ---

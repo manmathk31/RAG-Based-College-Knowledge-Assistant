@@ -53,6 +53,15 @@ class BaseVectorStore(ABC):
         pass
 
     @abstractmethod
+    async def get_points_by_ids(
+        self,
+        collection_name: str,
+        point_ids: List[str],
+    ) -> List[Dict[str, Any]]:
+        """Retrieve points and payloads by point IDs or chunk IDs."""
+        pass
+
+    @abstractmethod
     async def close(self) -> None:
         """Gracefully release client resources and connections."""
         pass

@@ -17,56 +17,87 @@ sequenceDiagram
     participant AdminApp as Admin Frontend (Vite)
     participant API as FastAPI Ingestion Endpoint
     participant Guard as Admin Secret Guard
-    participant Storage as Storage Abstraction
-    participant Pipeline as Ingestion Service
+    participant TempDisk as Ephemeral Staging (TempFile)
+    participant Supabase as Supabase PostgreSQL
+    participant Orch as Ingestion Orchestrator
     participant Extractor as PyMuPDF / docx / OCR
     participant HFEmbed as Hugging Face Inference API
     participant Qdrant as Qdrant Cloud
 
     Admin->>AdminApp: Upload Document (PDF/DOCX)
-    AdminApp->>API: POST /api/v1/documents/upload (Multipart + Admin Secret)
+    AdminApp->>API: POST /api/v1/documents (Multipart + X-Admin-Secret)
     API->>Guard: Verify ADMIN_API_SECRET
     alt Secret Invalid
         Guard-->>API: 401 Unauthorized
         API-->>AdminApp: Display Error
     else Secret Valid
         Guard-->>API: Authorized
-        API->>Storage: Store raw file artifact
-        Storage-->>API: file_storage_path / id
-        API->>Pipeline: Schedule Ingestion Task (file_id)
-        API-->>AdminApp: 202 Accepted (job_id, status="PROCESSING")
+        API->>TempDisk: Stream file chunks & verify magic bytes, size limit, SHA-256
+        
+        API->>Orch: Ingest staged upload
+        Orch->>Supabase: Check for exact content_hash duplicate
+        alt Duplicate found (status="completed", is_active=true)
+            Supabase-->>Orch: Existing DocumentModel
+            Orch-->>API: Return existing document (action="duplicate_skipped", is_duplicate=true)
+            API->>TempDisk: Cleanup temp file
+            API-->>AdminApp: 201 Created (Duplicate skipped)
+        else New content / New version
+            Orch->>Supabase: Query max(version) for normalized filename
+            Supabase-->>Orch: Current max version
+            Orch->>Supabase: Insert DocumentModel (version=N+1, status="processing", is_active=false)
+            Supabase-->>Orch: Created record (id, version)
 
-        Pipeline->>Extractor: Extract text page-by-page
-        alt Page is scanned image / empty text
-            Extractor->>Extractor: Invoke Tesseract OCR
+            Orch->>Extractor: Extract text page-by-page
+            alt Page has < 50 chars selectable text
+                Extractor->>Extractor: Invoke Tesseract OCR (300 DPI)
+            end
+            Extractor-->>Orch: Extracted document blocks
+
+            Orch->>Orch: Structure-aware chunking (600 tokens target, 100 overlap)
+            Orch->>HFEmbed: Generate embeddings (batch size <= 32, BAAI/bge-small-en-v1.5)
+            HFEmbed-->>Orch: 384-dim normalized embedding vectors
+
+            Orch->>Qdrant: Upsert points with payload (doc_id, version, page, section, text)
+            Qdrant-->>Orch: Indexing confirmed
+
+            Orch->>Supabase: Update status="completed", is_active=true, chunk_count
+            alt Replaced older versions exist
+                Orch->>Supabase: Set older versions is_active=false
+                Orch->>Qdrant: Purge older version vectors (delete_by_document_id)
+            end
+            Supabase-->>Orch: Activated record
+
+            Orch->>TempDisk: Cleanup temporary upload file
+            Orch-->>API: DocumentModel completed
+            API-->>AdminApp: 201 Created (document details)
         end
-        Extractor-->>Pipeline: Extracted text with page numbers
-
-        Pipeline->>Pipeline: Clean text & structure-aware recursive chunking
-        Pipeline->>HFEmbed: Generate embeddings (batch size <= 32)
-        HFEmbed-->>Pipeline: 384-dim embedding vectors
-
-        Pipeline->>Qdrant: Upsert vectors with chunk payload metadata
-        Qdrant-->>Pipeline: Index confirmed
-        Pipeline->>Pipeline: Update job status to "COMPLETED"
     end
 ```
 
 ### Ingestion Step Details:
 1. **Upload & Verification**: The administrator submits a PDF or DOCX file via the Admin Panel. The backend verifies the administrative token (`X-Admin-Secret`).
-2. **Raw Storage & Hashing**: A SHA-256 hash of the file is calculated to verify idempotency. The raw binary is saved via the `BaseDocumentStorage` abstraction.
-3. **Extraction & Selective OCR**:
-   - For PDFs, PyMuPDF reads text streams page by page.
-   - If a page has fewer than a configurable threshold of characters (e.g. < 50 chars), it is flagged as scanned and passed to Tesseract OCR.
-   - For DOCX files, `python-docx` parses paragraphs, heading levels, and tables.
-4. **Recursive Structure-Aware Chunking**: Text is split into chunks of ~1000 characters with 200-character overlap, respecting section headings, paragraph breaks, and sentence terminators.
+2. **Ephemeral Staging & Hashing**: The file stream is validated against allowed signatures (PDF magic bytes `%PDF-`, DOCX ZIP structure) and staged in a secure temporary file while computing a SHA-256 content hash. Upload size is bounded to `MAX_UPLOAD_SIZE_BYTES` (50 MB).
+3. **Supabase Registration & Deduplication**:
+   - The orchestrator checks Supabase for an existing completed record with the same content hash. If found, re-indexing is skipped.
+   - If a new version is uploaded with the same filename, version is incremented (`version = max + 1`).
+   - A document record is inserted into Supabase with `status="processing"` and `is_active=False`.
+4. **Extraction & Selective OCR**:
+   - For PDFs, `PDFExtractor` (PyMuPDF) extracts text blocks page by page to maintain strict 1:1 page correlation.
+   - If a page has fewer than a configurable threshold of characters (default: 50 characters via `OCR_MIN_PAGE_CHARS`), it is flagged as scanned and passed to `TesseractOCRExtractor` (rendered at 300 DPI).
+   - For DOCX files, `DOCXExtractor` (`python-docx`) traverses body elements in document order, preserving heading levels (`Heading 1-6`) and converting tables into markdown formatting.
+4. **Structure-Aware Chunking**: Text is chunked with `StructureAwareChunker` into units of ~600 tokens with ~100 tokens overlap using `tiktoken` (`cl100k_base`), respecting page boundaries, section headings, and sentence terminators.
 5. **Metadata Tagging**: Each chunk is tagged with:
    - `document_id`: Unique document identifier
    - `document_name`: Filename (e.g. `Academic_Regulations_2025.pdf`)
+   - `file_type`: Format (`pdf` or `docx`)
    - `page_number`: 1-based page index
-   - `chunk_index`: Sequence position
-   - `chunk_id`: Unique deterministic chunk ID (`{doc_id}_{page}_{index}`)
-   - `text`: Chunk text
+   - `chunk_index`: 0-based sequence position
+   - `chunk_id`: Unique deterministic chunk ID (`{doc_id}_p{page}_c{index}`)
+   - `text`: Chunk text content
+   - `token_count`: Number of tokens in chunk
+   - `char_count`: Character length of chunk
+   - `section_heading`: Nearest active heading context
+   - `ocr_applied`: Boolean indicating if OCR was used for this chunk's page
 6. **Batch Embedding**: Batches of chunk texts are sent to the Hugging Face `BAAI/bge-small-en-v1.5` inference endpoint (384 dimensions).
 7. **Vector Indexing**: Chunks and their vectors are upserted into Qdrant Cloud under the configured collection name.
 
@@ -95,11 +126,13 @@ sequenceDiagram
     par Dense Vector Search
         Retrieval->>HFEmbed: Embed question (BAAI/bge-small-en-v1.5)
         HFEmbed-->>Retrieval: query_vector (384-dim)
-        Retrieval->>Qdrant: Query top-K vectors (cosine similarity)
+        Retrieval->>Qdrant: Query top candidates (cosine similarity, is_active=true)
         Qdrant-->>Retrieval: Dense candidate list [R_dense]
     and Sparse / Keyword Search
-        Retrieval->>Retrieval: Search keyword index / Qdrant text match
-        Retrieval-->>Retrieval: Keyword candidate list [R_keyword]
+        Retrieval->>Supabase: Execute FTS (websearch_to_tsquery + ts_rank_cd, is_active=true)
+        Supabase-->>Retrieval: Keyword candidate IDs & scores
+        Retrieval->>Qdrant: get_points_by_ids(chunk_ids) for canonical text
+        Qdrant-->>Retrieval: Keyword candidate list with text [R_keyword]
     end
 
     Retrieval->>Retrieval: Merge candidates via Reciprocal Rank Fusion (RRF)
@@ -118,8 +151,8 @@ sequenceDiagram
 ### Query Step Details:
 1. **Query Validation**: Chat endpoint validates the query length and schema.
 2. **Parallel Hybrid Retrieval**:
-   - **Dense Search**: Converts the user's natural query into a 768-dimensional vector and executes an approximate nearest-neighbor query in Qdrant.
-   - **Keyword Search**: Performs exact and stemmed keyword matching against document text payloads to capture exact course numbers, dates, or faculty codes.
+   - **Dense Search**: Converts the user's natural query into a 384-dimensional vector using `BAAI/bge-small-en-v1.5` and executes an approximate nearest-neighbor query in Qdrant with `is_active=True` filtering.
+   - **Keyword Search**: Executes PostgreSQL full-text search against the `document_chunks` GIN `tsvector` index using `websearch_to_tsquery` and `ts_rank_cd`, fetching canonical text from Qdrant via `get_points_by_ids` without duplicating text in relational storage.
 3. **Reciprocal Rank Fusion (RRF)**:
    - Rank scores are calculated using the standard formula:
      $$\text{RRF\_Score}(d) = \sum_{m \in \{\text{dense}, \text{keyword}\}} \frac{1}{k + \text{rank}_m(d)}$$

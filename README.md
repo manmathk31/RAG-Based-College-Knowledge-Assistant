@@ -33,15 +33,17 @@ RAG-Based-College-Knowledge-Assistant/
 ├── backend/                   # Modular FastAPI backend
 │   ├── app/
 │   │   ├── api/               # API route controllers (v1/health, v1/chat, v1/documents)
-│   │   ├── core/              # Configuration (Pydantic Settings), logging
+│   │   ├── core/              # Configuration (Pydantic Settings), logging, exceptions
+│   │   ├── db/                # Supabase PostgreSQL session, models, Alembic migrations
 │   │   ├── schemas/           # Pydantic request/response contracts
-│   │   ├── ingestion/         # (Planned) Parsing, OCR, chunking
-│   │   ├── retrieval/         # (Planned) Dense + keyword hybrid search & RRF
-│   │   ├── generation/        # (Planned) Gemini grounded answer synthesis
-│   │   ├── vector_store/      # (Planned) Qdrant Cloud integration
+│   │   ├── ingestion/         # PDF/DOCX extractors, OCR, token chunking, orchestrator
+│   │   ├── retrieval/         # Dense + keyword hybrid search, RRF fusion, context builder
+│   │   ├── generation/        # Gemini grounded answer synthesis with citations
+│   │   ├── vector_store/      # Qdrant Cloud vector-store adapter
+│   │   ├── embeddings/        # Hosted Hugging Face embedding service
 │   │   ├── storage/           # Storage abstraction layer
 │   │   └── main.py            # FastAPI application entry point
-│   ├── tests/                 # Targeted Pytest suite
+│   ├── tests/                 # Targeted Pytest suite (96 tests passing)
 │   ├── requirements.txt       # Python dependencies
 │   └── pyproject.toml         # Python project configuration
 │
@@ -89,6 +91,7 @@ npm run dev -- --port 5174
 
 ## Core Engineering Documentation
 
+- [Frontend API Integration Guide](docs/frontend/API_INTEGRATION_GUIDE.md): Complete API handoff guide, schemas, citations, and frontend code examples.
 - [AGENTS.md](AGENTS.md): Architectural invariants, coding rules, and testing policy for developers and AI agents.
 - [System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md): Component breakdown and high-level Mermaid architecture diagrams.
 - [Data Flow & Sequence](docs/architecture/DATA_FLOW.md): Step-by-step ingestion and query workflows.

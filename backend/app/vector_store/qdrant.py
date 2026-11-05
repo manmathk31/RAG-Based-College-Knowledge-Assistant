@@ -217,6 +217,34 @@ class QdrantVectorStore(BaseVectorStore):
             logger.error("Failed to delete points for document_id='%s' from collection '%s': %s", document_id, collection_name, exc)
             raise VectorStoreOperationError(f"Failed to delete points for document_id '{document_id}': {exc}") from exc
 
+    async def get_points_by_ids(
+        self,
+        collection_name: str,
+        point_ids: List[str],
+    ) -> List[Dict[str, Any]]:
+        """Retrieve points and payloads by point IDs or chunk IDs from Qdrant."""
+        if not point_ids:
+            return []
+
+        normalized_ids = [self._normalize_point_id(pid) for pid in point_ids]
+        try:
+            records = await self._client.retrieve(
+                collection_name=collection_name,
+                ids=normalized_ids,
+                with_payload=True,
+                with_vectors=False,
+            )
+            return [
+                {
+                    "id": str(rec.id),
+                    "payload": rec.payload or {},
+                }
+                for rec in records
+            ]
+        except Exception as exc:
+            logger.error("Failed to retrieve points by IDs from collection '%s': %s", collection_name, exc)
+            raise VectorStoreOperationError(f"Failed to retrieve points by IDs from collection '{collection_name}': {exc}") from exc
+
     async def ping(self) -> bool:
         """Check live connectivity to Qdrant without modifying data."""
         try:
