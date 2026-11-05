@@ -28,7 +28,7 @@ These technical decisions are locked. AI agents MUST NOT alter, replace, or work
 | **Frontends** | React + TypeScript + Vite + Tailwind CSS | Two isolated frontend apps (`frontend/user-app` and `frontend/admin-app`). |
 | **Backend** | FastAPI (Python) | Modular monolith with clean domain separation. No microservices. |
 | **Vector Database** | Qdrant Cloud | Managed vector store for persistent vector storage and metadata filtering. No Supabase, ChromaDB, or Pinecone. |
-| **Embedding Provider** | Google Gemini API (`text-embedding-004`) | Hosted embedding API to avoid heavy local GPU dependencies. |
+| **Embedding Provider** | Hugging Face Inference Providers (`BAAI/bge-small-en-v1.5`, 384 dim) | Hosted feature-extraction API to avoid heavy local GPU dependencies. Configurable provider. |
 | **LLM Provider** | Google Gemini API (`gemini-2.5-flash`) | Fast, cost-efficient, grounded answer generation. |
 | **PDF Extraction** | PyMuPDF (`fitz`) | High-speed, robust PDF parsing. |
 | **DOCX Extraction** | `python-docx` | Native XML-based Word document parsing. |

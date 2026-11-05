@@ -11,10 +11,11 @@
 |---|---|---|
 | **Repository Structure & Monorepo Layout** | 🟢 COMPLETED | Clean monorepo structure with docs, backend, frontends established |
 | **Engineering Governance (AGENTS.md, ADRs)** | 🟢 COMPLETED | AGENTS.md, ADR-001, and engineering documentation written |
-| **Backend Core Configuration & Health Check** | 🟢 COMPLETED | FastAPI app, Pydantic settings, logging, /health & /api/v1/health endpoints verified |
+| **Backend Core Configuration & Health Check** | 🟢 COMPLETED | FastAPI app, Pydantic settings, logging, /health, /api/v1/health & /ready endpoints |
 | **Frontend Scaffolds (User & Admin Apps)** | 🟢 COMPLETED | React + TypeScript + Vite + Tailwind CSS setups tested and build successfully |
-| **Qdrant Vector Store Integration** | ⚪ NOT STARTED | Milestone 3: Pending backend client setup |
-| **Document Ingestion Pipeline (PDF/DOCX/OCR)** | ⚪ NOT STARTED | Milestone 4: Extraction, chunking, and metadata preservation |
+| **Hosted Embeddings Service (Hugging Face)** | 🟢 COMPLETED | HuggingFaceEmbeddingService (BAAI/bge-small-en-v1.5, 384 dim), retries & batching tested |
+| **Qdrant Vector Store Integration** | 🟢 COMPLETED | QdrantVectorStore adapter, collection validation, upsert, search, deletion tested |
+| **Document Ingestion Pipeline (PDF/DOCX/OCR)** | ⚪ NOT STARTED | Next Milestone: Extraction, chunking, and metadata preservation |
 | **Storage Abstraction & Job Handling** | ⚪ NOT STARTED | Milestone 5: File persistence and ingestion status lifecycle |
 | **Hybrid Retrieval & RRF Ranking** | ⚪ NOT STARTED | Milestone 6: Dense search + keyword search fusion |
 | **Gemini Generation & Grounded Citations** | ⚪ NOT STARTED | Milestone 7: Grounded prompt engineering and source attribution |
@@ -37,5 +38,5 @@
 
 ## 3. Current Focus & Immediate Next Actions
 
-- **Current Phase**: Foundation and initial scaffolds completed and validated.
-- **Immediate Next Task**: Milestone 3 — Qdrant Cloud connection, vector-store abstraction, and collection initialization.
+- **Current Phase**: Milestone 2 (Hosted Embeddings & Qdrant Vector Store) completed and validated.
+- **Immediate Next Task**: Document Ingestion Pipeline — format extractors (PyMuPDF, python-docx), selective OCR (Tesseract), and structure-aware chunking.

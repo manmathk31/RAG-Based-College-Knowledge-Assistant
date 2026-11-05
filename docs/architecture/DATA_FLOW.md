@@ -20,7 +20,7 @@ sequenceDiagram
     participant Storage as Storage Abstraction
     participant Pipeline as Ingestion Service
     participant Extractor as PyMuPDF / docx / OCR
-    participant GeminiAPI as Gemini Embedding API
+    participant HFEmbed as Hugging Face Inference API
     participant Qdrant as Qdrant Cloud
 
     Admin->>AdminApp: Upload Document (PDF/DOCX)
@@ -43,8 +43,8 @@ sequenceDiagram
         Extractor-->>Pipeline: Extracted text with page numbers
 
         Pipeline->>Pipeline: Clean text & structure-aware recursive chunking
-        Pipeline->>GeminiAPI: Generate embeddings (batch size <= 64)
-        GeminiAPI-->>Pipeline: 768-dim embedding vectors
+        Pipeline->>HFEmbed: Generate embeddings (batch size <= 32)
+        HFEmbed-->>Pipeline: 384-dim embedding vectors
 
         Pipeline->>Qdrant: Upsert vectors with chunk payload metadata
         Qdrant-->>Pipeline: Index confirmed
@@ -67,7 +67,7 @@ sequenceDiagram
    - `chunk_index`: Sequence position
    - `chunk_id`: Unique deterministic chunk ID (`{doc_id}_{page}_{index}`)
    - `text`: Chunk text
-6. **Batch Embedding**: Batches of chunk texts are sent to the Google Gemini `text-embedding-004` endpoint.
+6. **Batch Embedding**: Batches of chunk texts are sent to the Hugging Face `BAAI/bge-small-en-v1.5` inference endpoint (384 dimensions).
 7. **Vector Indexing**: Chunks and their vectors are upserted into Qdrant Cloud under the configured collection name.
 
 ---
@@ -83,8 +83,9 @@ sequenceDiagram
     participant UserApp as User Chatbot UI
     participant API as FastAPI Chat Endpoint
     participant Retrieval as Hybrid Retrieval Service
-    participant GeminiAPI as Gemini API (Embed & Gen)
+    participant HFEmbed as Hugging Face Inference API
     participant Qdrant as Qdrant Cloud
+    participant GeminiGen as Google Gemini API (Gen)
 
     Student->>UserApp: Enter Question ("What is the attendance policy for semester exams?")
     UserApp->>API: POST /api/v1/chat/query { "question": "..." }
@@ -92,8 +93,8 @@ sequenceDiagram
     API->>Retrieval: retrieve_context(query)
     
     par Dense Vector Search
-        Retrieval->>GeminiAPI: Embed question (text-embedding-004)
-        GeminiAPI-->>Retrieval: query_vector
+        Retrieval->>HFEmbed: Embed question (BAAI/bge-small-en-v1.5)
+        HFEmbed-->>Retrieval: query_vector (384-dim)
         Retrieval->>Qdrant: Query top-K vectors (cosine similarity)
         Qdrant-->>Retrieval: Dense candidate list [R_dense]
     and Sparse / Keyword Search
@@ -107,8 +108,8 @@ sequenceDiagram
     alt No relevant context found (similarity below threshold)
         API->>UserApp: "I cannot find authoritative information in the official documents."
     else Sufficient context retrieved
-        API->>GeminiAPI: Prompt gemini-2.5-flash with Grounded System Instruction + Context
-        GeminiAPI-->>API: Grounded answer with explicit citation references
+        API->>GeminiGen: Prompt gemini-2.5-flash with Grounded System Instruction + Context
+        GeminiGen-->>API: Grounded answer with explicit citation references
         API-->>UserApp: 200 OK { answer, sources: [{ doc, page, snippet }] }
         UserApp-->>Student: Render answer & clickable citation cards
     end

@@ -37,7 +37,7 @@ The ingestion pipeline is responsible for parsing unstructured institutional doc
 [Stage 4: Metadata Tagging] ─── (doc_id, page_no, chunk_id, file_hash)
        │
        ▼
-[Stage 5: Batch Embedding Generation] ─── (Gemini text-embedding-004)
+[Stage 5: Batch Embedding Generation] ─── (Hugging Face BAAI/bge-small-en-v1.5, 384-dim)
        │
        ▼
 [Stage 6: Qdrant Vector & Payload Indexing] ─── (HNSW Upsert)
@@ -99,13 +99,14 @@ Every chunk generated must adhere to this payload contract:
 ```
 
 ### Stage 5: Batch Embedding Generation
-- Text is sent in batches (up to 64 chunks per batch) to Google Gemini's `text-embedding-004` model.
-- Includes exponential backoff retry logic for transient API rate limits (HTTP 429).
+- Text is sent in batches (default batch size: 32 chunks) to the hosted Hugging Face Inference Providers using `BAAI/bge-small-en-v1.5`.
+- Generates 384-dimensional normalized dense vectors.
+- Includes exponential backoff retry logic for transient API rate limits (HTTP 429) and cold starts (HTTP 503).
 
 ### Stage 6: Vector Indexing (Qdrant Cloud)
-- Vectors (768 dimensions) are upserted into Qdrant Cloud.
-- Vectors use cosine distance metric.
-- Payloads are indexed for filtered retrieval (e.g., filtering by `document_id`).
+- Vectors (384 dimensions) are upserted into Qdrant Cloud.
+- Vectors use Cosine distance metric.
+- Payloads are indexed for filtered retrieval (e.g., keyword index on `document_id`).
 
 ### Stage 7: Ingestion Lifecycle & Error Handling
 Document status follows this state machine:
@@ -129,7 +130,8 @@ UPLOADED ──► PROCESSING ──► INDEXED
 | DOCX Text Extractor | python-docx paragraph/table parsing | ⏳ Not Started (Milestone 4) |
 | Selective OCR | Tesseract 300 DPI fallback | ⏳ Not Started (Milestone 4) |
 | Recursive Chunking | Structure-aware recursive splitting | ⏳ Not Started (Milestone 4) |
-| Gemini Embeddings | Batch vector generation | ⏳ Not Started (Milestone 4) |
-| Qdrant Upsert | Vector and payload indexing | ⏳ Not Started (Milestone 3 & 4) |
+| Hosted Embeddings | Hugging Face BAAI/bge-small-en-v1.5 (384 dim) | 🟢 Implemented (Milestone 2) |
+| Qdrant Upsert & Search | Vector and payload indexing with payload index | 🟢 Implemented (Milestone 2) |
+| Ingestion Pipeline Orchestrator | Pipeline coordinating extraction to Qdrant | ⏳ Not Started (Milestone 4 & 5) |
 | Idempotency & Cleanup | Hash check and rollback on failure | ⏳ Not Started (Milestone 5) |
 

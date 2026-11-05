@@ -41,17 +41,26 @@ class Settings(BaseSettings):
     # Administrative Secret
     ADMIN_API_SECRET: str = "dev-admin-secret"
 
-    # Hosted LLM & Embeddings (Google Gemini API)
+    # Hosted Embeddings (Hugging Face Inference Providers)
+    HF_TOKEN: str = ""
+    EMBEDDING_PROVIDER: str = "huggingface"
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_BATCH_SIZE: int = 32
+    EMBEDDING_TIMEOUT: float = 30.0
+    EMBEDDING_MAX_RETRIES: int = 3
+
+    # Hosted LLM Generation (Google Gemini API - Planned for Milestone 7)
     GEMINI_API_KEY: str = ""
     GEMINI_GENERATION_MODEL: str = "gemini-2.5-flash"
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
 
     # Vector Database (Qdrant Cloud)
     QDRANT_URL: str = ""
     QDRANT_API_KEY: str = ""
     QDRANT_COLLECTION_NAME: str = "college_knowledge_base"
+    QDRANT_TIMEOUT: float = 10.0
 
-    # Ingestion & Chunking
+    # Ingestion & Chunking Defaults (Planned for Milestones 4 & 5)
     CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 200
     OCR_ENABLED: bool = True
@@ -69,4 +78,3 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Return a cached instance of application settings."""
     return Settings()
-

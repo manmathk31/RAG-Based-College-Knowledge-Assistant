@@ -24,6 +24,7 @@ Every ADR in this directory must follow this standard format:
 | ADR ID | Title | Status | Date |
 |---|---|---|---|
 | [ADR-001](ADR-001-INITIAL-ARCHITECTURE.md) | Initial Architecture & Technology Stack | ACCEPTED | 2026-11-05 |
+| [ADR-002](ADR-002-HOSTED-EMBEDDINGS-HF.md) | Hosted Embeddings via Hugging Face Inference Providers | ACCEPTED | 2026-11-05 |
 
 ## Guidelines for Proposing New ADRs
 

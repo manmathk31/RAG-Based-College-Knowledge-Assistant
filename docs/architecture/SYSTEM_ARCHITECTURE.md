@@ -29,8 +29,8 @@ flowchart TD
     end
 
     subgraph ExternalServices ["External Cloud Services Tier"]
-        GeminiEmbed["Google Gemini API<br/>(text-embedding-004)"]
-        GeminiGen["Google Gemini API<br/>(gemini-2.5-flash)"]
+        HFEmbed["Hugging Face Inference Providers<br/>(BAAI/bge-small-en-v1.5, 384-dim)"]
+        GeminiGen["Google Gemini API<br/>(gemini-2.5-flash - Planned M7)"]
         QdrantCloud[("Qdrant Cloud<br/>(Persistent Vectors & Payloads)")]
     end
 
@@ -46,11 +46,11 @@ flowchart TD
     RouterIngest --> IngestionSvc
 
     IngestionSvc --> StorageSvc
-    IngestionSvc --> GeminiEmbed
-    GeminiEmbed --> IngestionSvc
+    IngestionSvc --> HFEmbed
+    HFEmbed --> IngestionSvc
     IngestionSvc --> QdrantCloud
 
-    RetrievalSvc --> GeminiEmbed
+    RetrievalSvc --> HFEmbed
     RetrievalSvc --> QdrantCloud
     GenerationSvc --> GeminiGen
 ```
@@ -93,13 +93,22 @@ flowchart TD
 ### 2.4 Vector Storage Tier (`Qdrant Cloud`)
 - **Role**: Managed vector database.
 - **Storage Strategy**:
-  - Vectors generated from chunk text via `text-embedding-004` (768 dimensions).
-  - Rich payloads containing `document_id`, `document_name`, `page_number`, `chunk_index`, `text_content`, `created_at`, and `file_hash`.
+  - Vectors generated from text via `BAAI/bge-small-en-v1.5` (384 dimensions) using Cosine distance.
+  - Rich payloads containing `document_id`, `document_name`, `document_version`, `page_number`, `section`, `chunk_id`, `chunk_index`, `content`, `content_hash`, and `embedding_model`.
   - HNSW indexing enabled for real-time nearest neighbor similarity search.
+  - Payload index created on `document_id` for fast filtered document deletions and scoped queries.
 
-### 2.5 External LLM & Embedding Tier (`Google Gemini API`)
-- **Embeddings**: `text-embedding-004` for converting text chunks and user queries into dense semantic representations.
-- **Answer Generation**: `gemini-2.5-flash` for fast, cost-effective generation adhering to strict context-grounding prompts.
+### 2.5 Hosted Embeddings (`Hugging Face Inference Providers`)
+- **Model**: `BAAI/bge-small-en-v1.5` (384-dimensional dense vectors, task: `feature-extraction`).
+- **Client**: Official `huggingface_hub.AsyncInferenceClient`.
+- **Batching & Retries**: Automatic sub-batch chunking (`EMBEDDING_BATCH_SIZE=32`), bounded exponential backoff on HTTP 429 and 503, strict dimension validation.
+- **Free-Tier Limits & Operational Notes**:
+  - Hugging Face serverless free-tier inference is subject to rate limits and occasional cold starts (HTTP 503 while models load on shared servers).
+  - The adapter gracefully handles cold starts with backoff retries.
+  - The service is not permanently unlimited; dedicated Inference Endpoints or Pro subscriptions are recommended for high-volume production deployments.
+
+### 2.6 External LLM Tier (`Google Gemini API` - Planned Milestone 7)
+- **Answer Generation**: `gemini-2.5-flash` for fast, cost-effective generation adhering to strict context-grounding prompts. (Not implemented in Milestone 2).
 
 ---
 
