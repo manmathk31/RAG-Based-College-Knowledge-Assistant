@@ -73,19 +73,32 @@ class QdrantVectorStore(BaseVectorStore):
                         distance=models.Distance.COSINE,
                     ),
                 )
-                # Create keyword payload index for document_id filtering
-                await self._client.create_payload_index(
-                    collection_name=collection_name,
-                    field_name="document_id",
-                    field_schema=models.PayloadSchemaType.KEYWORD,
-                )
-                logger.info("Collection '%s' successfully created with payload index on 'document_id'.", collection_name)
             except Exception as exc:
                 logger.error("Failed to create collection '%s': %s", collection_name, exc)
                 raise VectorStoreOperationError(f"Failed to create collection '{collection_name}': {exc}") from exc
         else:
             logger.info("Collection '%s' already exists. Validating configuration...", collection_name)
             await self.validate_collection(collection_name, vector_size)
+
+        # Ensure required payload indexes exist (document_id, is_active)
+        await self._ensure_payload_indexes(collection_name)
+
+    async def _ensure_payload_indexes(self, collection_name: str) -> None:
+        """Ensure required payload indexes (document_id, is_active) exist for filtering."""
+        indexes = [
+            ("document_id", models.PayloadSchemaType.KEYWORD),
+            ("is_active", models.PayloadSchemaType.BOOL),
+        ]
+        for field_name, field_schema in indexes:
+            try:
+                await self._client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=field_name,
+                    field_schema=field_schema,
+                )
+                logger.info("Ensured payload index for '%s' in collection '%s'.", field_name, collection_name)
+            except Exception as exc:
+                logger.debug("create_payload_index for '%s' in collection '%s': %s", field_name, collection_name, exc)
 
     async def validate_collection(self, collection_name: str, expected_vector_size: int) -> bool:
         """Validate that an existing collection has compatible vector size and Cosine distance."""
@@ -177,16 +190,46 @@ class QdrantVectorStore(BaseVectorStore):
                 must_conditions.append(models.FieldCondition(key=key, match=models.MatchValue(value=val)))
             query_filter = models.Filter(must=must_conditions)
 
+        async def _execute_search():
+            if hasattr(self._client, "query_points") and (
+                isinstance(self._client, AsyncQdrantClient) or not hasattr(self._client, "search")
+            ):
+                resp = await self._client.query_points(
+                    collection_name=collection_name,
+                    query=query_vector,
+                    limit=limit,
+                    query_filter=query_filter,
+                )
+                return resp.points if hasattr(resp, "points") else resp
+            else:
+                return await self._client.search(
+                    collection_name=collection_name,
+                    query_vector=query_vector,
+                    limit=limit,
+                    query_filter=query_filter,
+                )
+
         try:
-            scored_points = await self._client.search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                limit=limit,
-                query_filter=query_filter,
-            )
+            scored_points = await _execute_search()
         except Exception as exc:
-            logger.error("Vector search failed in collection '%s': %s", collection_name, exc)
-            raise VectorStoreOperationError(f"Vector search failed in collection '{collection_name}': {exc}") from exc
+            err_msg = str(exc)
+            if "Index required but not found for" in err_msg:
+                logger.warning(
+                    "Missing payload index in Qdrant collection '%s': %s. Auto-creating index and retrying...",
+                    collection_name,
+                    exc,
+                )
+                try:
+                    await self._ensure_payload_indexes(collection_name)
+                    scored_points = await _execute_search()
+                except Exception as retry_exc:
+                    logger.error("Vector search retry failed in collection '%s': %s", collection_name, retry_exc)
+                    raise VectorStoreOperationError(
+                        f"Vector search failed in collection '{collection_name}': {retry_exc}"
+                    ) from retry_exc
+            else:
+                logger.error("Vector search failed in collection '%s': %s", collection_name, exc)
+                raise VectorStoreOperationError(f"Vector search failed in collection '{collection_name}': {exc}") from exc
 
         return [
             {

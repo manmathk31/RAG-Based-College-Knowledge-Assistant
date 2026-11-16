@@ -46,7 +46,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db(settings=settings)
 
     # Initialize Embedding Service and store on app.state
-    embedding_service = HuggingFaceEmbeddingService(settings=settings)
+    if settings.EMBEDDING_PROVIDER.lower() in ("fastembed", "local"):
+        from app.embeddings.fastembed import FastEmbedEmbeddingService
+        embedding_service = FastEmbedEmbeddingService(settings=settings)
+    else:
+        embedding_service = HuggingFaceEmbeddingService(settings=settings)
     app.state.embedding_service = embedding_service
 
     # Initialize Qdrant Vector Store and store on app.state

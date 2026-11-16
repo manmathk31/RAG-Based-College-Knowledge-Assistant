@@ -4,6 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
+from app.core.config import Settings
 from app.core.exceptions import (
     GenerationAuthenticationError,
     GenerationError,
@@ -59,7 +60,8 @@ async def test_gemini_empty_context_returns_grounded_fallback(mock_genai_client)
 @pytest.mark.asyncio
 async def test_gemini_missing_api_key_raises_auth_error():
     """Verify that instantiating and calling generate without an API key raises GenerationAuthenticationError."""
-    service = GeminiGenerationService(client=None)
+    empty_settings = Settings(GEMINI_API_KEY="")
+    service = GeminiGenerationService(settings=empty_settings, client=None)
 
     with pytest.raises(GenerationAuthenticationError) as exc_info:
         await service.generate_answer("test query", "some context")

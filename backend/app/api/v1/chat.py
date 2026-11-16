@@ -33,16 +33,27 @@ async def get_optional_db(request: Request) -> AsyncGenerator[Optional[AsyncSess
 
     Ensures chat queries continue functioning via dense-only search if Supabase is down.
     """
+    gen = None
     try:
-        async for session in get_db():
-            yield session
-            return
+        gen = get_db()
+        session = await anext(gen)
     except DatabaseUnavailableError:
         logger.info("Supabase PostgreSQL unavailable during chat query; falling back to dense Qdrant retrieval.")
         yield None
+        return
     except Exception as exc:
         logger.warning("Database connection failed during chat query (%s); falling back to dense retrieval.", exc)
         yield None
+        return
+
+    try:
+        yield session
+    finally:
+        if gen is not None:
+            try:
+                await gen.aclose()
+            except Exception:
+                pass
 
 
 def get_retrieval_engine(request: Request) -> HybridRetrievalEngine:

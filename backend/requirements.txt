@@ -7,8 +7,9 @@ python-multipart>=0.0.9
 httpx>=0.27.0
 python-dotenv>=1.0.1
 
-# Hosted Embeddings (Hugging Face Inference Providers)
+# Embeddings (Hugging Face / FastEmbed Local)
 huggingface_hub>=0.25.0
+fastembed>=0.4.0
 numpy>=2.0.0
 
 # Vector Database (Qdrant Cloud)
