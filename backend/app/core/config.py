@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     # Administrative Secret
     ADMIN_API_SECRET: str = "dev-admin-secret"
 
+    # Student authentication. Use a long random secret in production.
+    AUTH_JWT_SECRET: str = ""
+    AUTH_ACCESS_TOKEN_MINUTES: int = 15
+    AUTH_REFRESH_TOKEN_DAYS: int = 7
+    AUTH_COOKIE_SECURE: bool = False
+
     # Relational Database (Supabase PostgreSQL Metadata)
     DATABASE_URL: str = ""
     DB_POOL_SIZE: int = 5

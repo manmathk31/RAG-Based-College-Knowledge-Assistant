@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.core.config import get_settings
 from app.db.base import Base
 import app.db.models  # ensure models are registered
+import app.db.auth_models  # register student auth model
 from app.db.session import _prepare_asyncpg_url
 
 # this is the Alembic Config object, which provides
