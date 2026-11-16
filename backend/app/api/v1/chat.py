@@ -20,6 +20,8 @@ from app.db.session import get_db
 from app.generation.base import BaseGenerationService
 from app.retrieval.engine import HybridRetrievalEngine
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.api.v1.auth import get_optional_student
+from app.db.auth_models import StudentModel
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +70,12 @@ def get_generation_service(request: Request) -> BaseGenerationService:
 )
 async def chat_query(
     payload: ChatRequest,
+    student: Optional[StudentModel] = Depends(get_optional_student),
     db: Optional[AsyncSession] = Depends(get_optional_db),
     retrieval_engine: HybridRetrievalEngine = Depends(get_retrieval_engine),
     generation_service: BaseGenerationService = Depends(get_generation_service),
 ) -> ChatResponse:
-    """Answer student questions by performing hybrid retrieval over college documents
+    """Answer public or student questions by performing hybrid retrieval over college documents
 
     and generating grounded answers with exact source citations via Google Gemini.
     """

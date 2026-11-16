@@ -23,6 +23,9 @@ dependencies = [
     "asyncpg>=0.30.0",
     "alembic>=1.13.0",
     "google-genai>=0.1.1",
+    "PyJWT>=2.9.0",
+    "pwdlib[argon2]>=0.2.0",
+    "email-validator>=2.2.0",
     "python-multipart>=0.0.9",
     "numpy>=2.0.0",
     "pymupdf>=1.24.0",
@@ -39,6 +42,9 @@ dev = [
 ]
 rag = [
     "google-genai>=0.1.1",
+    "PyJWT>=2.9.0",
+    "pwdlib[argon2]>=0.2.0",
+    "email-validator>=2.2.0",
 ]
 
 [tool.pytest.ini_options]

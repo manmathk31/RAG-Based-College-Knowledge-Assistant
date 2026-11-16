@@ -6,7 +6,7 @@
 [![Vector DB: Qdrant Cloud](https://img.shields.io/badge/Vector%20DB-Qdrant%20Cloud-DC2626)](https://qdrant.tech/)
 [![LLM: Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-8E75B2)](https://ai.google.dev/)
 
-An engineering-grade, maintainable College Knowledge Assistant powered by Retrieval-Augmented Generation (RAG). Students can query academic policies, admission guidelines, fee structures, and campus services via a responsive chatbot that generates grounded answers backed by precise document and page citations. Administrators manage and monitor the document ingestion lifecycle through an isolated administrative interface.
+An engineering-grade College Knowledge Assistant powered by Retrieval-Augmented Generation (RAG). **Visitors and prospective students can use the chatbot without registering or logging in** to explore admissions, programmes, eligibility, fees, placements, academics, and campus facilities. Existing MITAOE students can optionally sign in for authenticated student features. Administrators manage document ingestion through a separate administrative interface.
 
 ---
 
@@ -27,7 +27,7 @@ RAG-Based-College-Knowledge-Assistant/
 │   └── project/               # Project status, implementation roadmap, changelog
 │
 ├── frontend/                  # Dual independent frontend applications
-│   ├── user-app/              # Student-facing chatbot (React, TS, Vite, Tailwind)
+│   ├── user-app/              # Public guest-first chatbot + optional student login
 │   └── admin-app/             # Admin document management portal (React, TS, Vite, Tailwind)
 │
 ├── backend/                   # Modular FastAPI backend
@@ -60,17 +60,29 @@ RAG-Based-College-Knowledge-Assistant/
 - Qdrant Cloud cluster & Google Gemini API key
 
 ### 2. Configure Environment
+
+Configure the backend environment from its own directory (the settings loader reads `backend/.env`):
+
 ```bash
+cd backend
 cp .env.example .env
-# Edit .env with your GEMINI_API_KEY and QDRANT credentials
+# Edit .env with GEMINI_API_KEY, QDRANT_URL, QDRANT_API_KEY, HF_TOKEN,
+# DATABASE_URL (when using Supabase), and AUTH_JWT_SECRET.
+cd ..
 ```
+
+Use a unique random `AUTH_JWT_SECRET` of at least 32 characters. Keep real `.env` files out of Git.
 
 ### 3. Start Backend
 ```powershell
 cd backend
 ..\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
+
+If you are using student sign-in, configure `DATABASE_URL` and run the migration. Create student accounts from `backend` with `python -m scripts.create_student`. Student accounts are provisioned by an administrator; guest visitors do not need accounts.
 - API Health Check: `http://localhost:8000/api/v1/health`
 - Swagger UI Documentation: `http://localhost:8000/docs`
 
@@ -91,6 +103,7 @@ npm run dev -- --port 5174
 
 ## Core Engineering Documentation
 
+- [Guest and optional student access](docs/development/GUEST_AND_STUDENT_ACCESS.md): public guest flow, optional student login, and deployment precautions.
 - [Frontend API Integration Guide](docs/frontend/API_INTEGRATION_GUIDE.md): Complete API handoff guide, schemas, citations, and frontend code examples.
 - [AGENTS.md](AGENTS.md): Architectural invariants, coding rules, and testing policy for developers and AI agents.
 - [System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md): Component breakdown and high-level Mermaid architecture diagrams.
