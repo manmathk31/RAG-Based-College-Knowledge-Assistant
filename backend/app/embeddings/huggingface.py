@@ -77,6 +77,8 @@ class HuggingFaceEmbeddingService(BaseEmbeddingService):
             raise EmbeddingError("Failed to obtain embedding from provider for single text input.")
         return embeddings[0]
 
+    embed_single = embed_text
+
     async def embed_batch(self, texts: List[str]) -> List[List[float]]:
         """Generate embedding vectors for a batch of text strings with chunked batching."""
         if not texts:

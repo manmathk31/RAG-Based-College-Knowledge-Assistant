@@ -1,27 +1,155 @@
 import { useState, type FormEvent } from "react";
-import { GraduationCap, Mail, LockKeyhole, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { GraduationCap, Mail, LockKeyhole, Eye, EyeOff, ArrowRight, ShieldCheck, UserCheck, Sparkles } from "lucide-react";
 import "./Login.css";
 
-export default function Login({onLogin}:{onLogin:(email:string,password:string)=>Promise<void>}){
- const [email,setEmail]=useState("");const [password,setPassword]=useState("");
- const [show,setShow]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
- const submit=async(e:FormEvent)=>{e.preventDefault();setBusy(true);setError("");try{await onLogin(email.trim().toLowerCase(),password);}catch(err){setError(err instanceof Error?err.message:"Sign in failed.");}finally{setBusy(false);}};
- return <main className="auth-page">
-  <section className="auth-left">
-   <div className="auth-brand"><div className="auth-logo"><GraduationCap size={29}/></div><div><b>MIT Academy of Engineering</b><small>ALANDI, PUNE</small></div></div>
-   <div className="auth-form-wrap">
-    <span className="auth-kicker">OPTIONAL STUDENT SIGN-IN</span><h1>Welcome<br/><em>Back!</em></h1>
-    <p className="auth-intro">Optional sign-in for existing MITAOE students. Visitors and prospective students can use the assistant without an account.</p>
-    <form onSubmit={submit}>
-     <label>Email address</label><div className="auth-input"><Mail size={18}/><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Personal or college email" autoComplete="username" required/></div>
-     <label>Password</label><div className="auth-input"><LockKeyhole size={18}/><input type={show?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password" autoComplete="current-password" required/><button type="button" onClick={()=>setShow(!show)} aria-label="Toggle password">{show?<EyeOff size={18}/>:<Eye size={18}/>}</button></div>
-     {error&&<div className="auth-error" role="alert">{error}</div>}
-     <button className="auth-submit" disabled={busy}>{busy?"Signing in…":"Sign in"}<ArrowRight size={18}/></button>
-    </form>
-    <div className="auth-security"><ShieldCheck size={18}/> Student sign-in is optional. You can close this window and continue as a guest.</div>
-   </div>
-   <footer>© {new Date().getFullYear()} MIT Academy of Engineering</footer>
-  </section>
-  <section className="auth-right"><div className="auth-copy"><span>COLLEGE KNOWLEDGE ASSISTANT</span><h2>Your College.<br/>Your Knowledge.<br/><b>One Intelligent Assistant.</b></h2><p>Explore admissions, programmes, eligibility, fees, placements, campus facilities and academic information. No login is needed for public college information.</p><div><ShieldCheck/> Verified college information</div><div><GraduationCap/> Support for students and future applicants</div><div><LockKeyhole/> Protected student access</div></div></section>
- </main>;
+interface LoginProps {
+  onLogin: (email: string, password: string) => Promise<void>;
+  onContinueGuest: () => void;
+  isOverlay?: boolean;
+}
+
+export default function Login({ onLogin, onContinueGuest, isOverlay }: LoginProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setBusy(true);
+    setError("");
+    try {
+      await onLogin(email.trim().toLowerCase(), password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed. Please check your credentials.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fillDemo = () => {
+    setEmail("student@mitaoe.ac.in");
+    setPassword("Password123");
+  };
+
+  return (
+    <main className={`auth-page ${isOverlay ? "auth-overlay-mode" : ""}`}>
+      <section className="auth-left">
+        <div className="auth-brand">
+          <div className="auth-logo">
+            <GraduationCap size={28} />
+          </div>
+          <div>
+            <b>MIT Academy of Engineering</b>
+            <small>ALANDI, PUNE · AUTONOMOUS INSTITUTE</small>
+          </div>
+        </div>
+
+        <div className="auth-form-wrap">
+          <span className="auth-kicker">COLLEGE KNOWLEDGE ASSISTANT</span>
+          <h1>
+            Student <em>Portal</em>
+          </h1>
+          <p className="auth-intro">
+            Sign in with your student credentials, or continue as a guest to explore admissions,
+            fees, examinations, and college regulations.
+          </p>
+
+          <form onSubmit={submit}>
+            <label htmlFor="student-email">Email address</label>
+            <div className="auth-input">
+              <Mail size={18} />
+              <input
+                id="student-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="student@mitaoe.ac.in or personal email"
+                autoComplete="username"
+                required
+              />
+            </div>
+
+            <label htmlFor="student-password">Password</label>
+            <div className="auth-input">
+              <LockKeyhole size={18} />
+              <input
+                id="student-password"
+                type={show ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your student password"
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShow(!show)}
+                aria-label="Toggle password visibility"
+              >
+                {show ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            {error && (
+              <div className="auth-error" role="alert">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" className="auth-submit" disabled={busy}>
+              {busy ? "Signing in..." : "Sign in as Student"}
+              <ArrowRight size={18} />
+            </button>
+          </form>
+
+          {/* Quick demo credentials hint */}
+          <div className="demo-hint-box">
+            <span>Testing student mode?</span>
+            <button type="button" onClick={fillDemo} className="demo-fill-btn">
+              Auto-fill demo credentials
+            </button>
+          </div>
+
+          <div className="auth-divider">
+            <span>OR</span>
+          </div>
+
+          {/* Explicit Continue as Guest option */}
+          <div className="guest-action-card">
+            <div className="guest-action-info">
+              <div className="guest-badge">
+                <Sparkles size={14} /> GUEST ACCESS
+              </div>
+              <h3>Explore as Guest</h3>
+              <p>
+                No account needed. Ask questions about admissions, eligibility, fees,
+                placement stats, courses, exams, and hostel facilities.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="guest-submit-btn"
+              onClick={onContinueGuest}
+            >
+              <UserCheck size={18} />
+              Continue as Guest
+              <ArrowRight size={16} />
+            </button>
+          </div>
+
+          <div className="auth-security">
+            <ShieldCheck size={18} />
+            <span>All responses are grounded in verified, official MITAOE documents.</span>
+          </div>
+        </div>
+
+        <footer>
+          © {new Date().getFullYear()} MIT Academy of Engineering, Pune. All rights reserved.
+        </footer>
+      </section>
+    </main>
+  );
 }

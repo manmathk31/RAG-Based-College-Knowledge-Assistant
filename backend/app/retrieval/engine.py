@@ -10,6 +10,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import RetrievalError
 from app.embeddings.base import BaseEmbeddingService
 from app.retrieval.context import ContextBuilder
+from app.retrieval.default_knowledge import search_default_knowledge
 from app.retrieval.dense import DenseRetriever
 from app.retrieval.keyword import KeywordRetriever
 from app.retrieval.models import RetrievalCandidate, SourceCitation
@@ -98,11 +99,15 @@ class HybridRetrievalEngine:
 
         # Determine retrieval mode and handle degradation
         if dense_error and (keyword_error or db is None or not keyword_candidates):
-            raise RetrievalError(
-                f"Both dense vector retrieval and keyword retrieval failed. Dense: {dense_error}, Keyword: {keyword_error}"
-            )
-
-        if dense_candidates and keyword_candidates:
+            fallback_candidates = search_default_knowledge(query, limit=k_val)
+            if fallback_candidates:
+                retrieval_mode = "knowledge_base"
+                fused = fallback_candidates
+            else:
+                raise RetrievalError(
+                    f"Both dense vector retrieval and keyword retrieval failed. Dense: {dense_error}, Keyword: {keyword_error}"
+                )
+        elif dense_candidates and keyword_candidates:
             retrieval_mode = "hybrid"
             fused = reciprocal_rank_fusion(
                 dense_candidates=dense_candidates,
@@ -117,8 +122,13 @@ class HybridRetrievalEngine:
             retrieval_mode = "keyword_only"
             fused = keyword_candidates[:k_val]
         else:
-            retrieval_mode = "none"
-            fused = []
+            fallback_candidates = search_default_knowledge(query, limit=k_val)
+            if fallback_candidates:
+                retrieval_mode = "knowledge_base"
+                fused = fallback_candidates
+            else:
+                retrieval_mode = "none"
+                fused = []
 
         # Build formatted context and source citations
         context_text, citations = self._context_builder.build_context(

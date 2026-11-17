@@ -1,0 +1,206 @@
+import { useState, useEffect } from "react";
+import { BookOpen, FileText, HelpCircle, ArrowRight, CheckCircle2 } from "lucide-react";
+import { fetchKnowledgeCatalog } from "../services/api";
+import type { KnowledgeDoc } from "../types/api";
+
+interface KnowledgeBaseProps {
+  onSelectQuestion: (question: string) => void;
+}
+
+const FALLBACK_DOCS: KnowledgeDoc[] = [
+  {
+    id: "doc-academic-regulations",
+    title: "MITAOE Academic Regulations & Attendance Policy",
+    category: "Academics",
+    version: "2025.1",
+    pages: 18,
+    description: "Rules governing mandatory 75% attendance, condonation on medical grounds, credit requirements, and academic honors.",
+    sampleQuestions: [
+      "What is the minimum attendance requirement?",
+      "What is the procedure for medical leave condonation?",
+      "What are the criteria for academic honors and distinction?"
+    ]
+  },
+  {
+    id: "doc-exam-evaluation",
+    title: "MITAOE Examination & Evaluation Manual",
+    category: "Examinations",
+    version: "2025.1",
+    pages: 24,
+    description: "Continuous evaluation (ISE) and End-Semester Exam (ESE) weightage, 10-point absolute grading scale, ATKT backlog limits, and revaluation appeal.",
+    sampleQuestions: [
+      "Explain the exam revaluation process",
+      "What is the grading scale and how is CGPA calculated?",
+      "How many backlogs are allowed for ATKT progression?"
+    ]
+  },
+  {
+    id: "doc-scholarships",
+    title: "MITAOE Scholarship & Financial Aid Handbook",
+    category: "Financial Aid",
+    version: "2025.1",
+    pages: 12,
+    description: "MahaDBT government scholarships, Rajarshi Shahu Maharaj EBC fee waiver (50%), TFWS supernumerary seats, and Institute Merit Awards.",
+    sampleQuestions: [
+      "Where can I find scholarship information?",
+      "What is the eligibility for EBC and TFWS fee concessions?",
+      "Are there merit-based scholarships for top rankers?"
+    ]
+  },
+  {
+    id: "doc-hostel-campus",
+    title: "MITAOE Campus Facilities & Hostel Handbook",
+    category: "Campus Life",
+    version: "2025.1",
+    pages: 16,
+    description: "Boys and girls hostel rooms, dining/mess meal schedules, 24/7 security, central library timings, Book Bank facility, and 24/7 health center.",
+    sampleQuestions: [
+      "What hostel facilities are available?",
+      "What are the hostel mess timings and menu rules?",
+      "What are the library hours and digital book lending limits?"
+    ]
+  },
+  {
+    id: "doc-admissions-fees",
+    title: "MITAOE Admissions & Fee Structure Guide",
+    category: "Admissions",
+    version: "2025.1",
+    pages: 20,
+    description: "B.Tech admission criteria through MHT-CET and JEE Main CAP rounds, direct second year lateral entry, fee breakdown, and installment payment facility.",
+    sampleQuestions: [
+      "What is the fee structure for B.Tech programmes?",
+      "Can tuition fees be paid in installments?",
+      "What is the refund policy if I cancel my admission?"
+    ]
+  },
+  {
+    id: "doc-placements-internships",
+    title: "MITAOE Training & Placement Cell Guidelines",
+    category: "Placements",
+    version: "2025.1",
+    pages: 14,
+    description: "Campus placement drive eligibility (6.50 CGPA minimum), dream company tier offers, semester internship credits, and top recruiters.",
+    sampleQuestions: [
+      "What is the minimum CGPA required to sit for campus placements?",
+      "What are the placement statistics and top recruiting companies?",
+      "Can I accept a second offer if I receive a dream company package?"
+    ]
+  }
+];
+
+export default function KnowledgeBase({ onSelectQuestion }: KnowledgeBaseProps) {
+  const [docs, setDocs] = useState<KnowledgeDoc[]>(FALLBACK_DOCS);
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [search, setSearch] = useState<string>("");
+
+  useEffect(() => {
+    fetchKnowledgeCatalog()
+      .then((res) => {
+        if (res?.documents?.length) {
+          setDocs(res.documents);
+        }
+      })
+      .catch(() => {
+        // Fallback already pre-loaded
+      });
+  }, []);
+
+  const categories = ["All", ...Array.from(new Set(docs.map((d) => d.category)))];
+
+  const filteredDocs = docs.filter((d) => {
+    const matchCat = activeCategory === "All" || d.category === activeCategory;
+    const matchSearch =
+      !search.trim() ||
+      d.title.toLowerCase().includes(search.toLowerCase()) ||
+      d.description.toLowerCase().includes(search.toLowerCase()) ||
+      d.sampleQuestions.some((q) => q.toLowerCase().includes(search.toLowerCase()));
+    return matchCat && matchSearch;
+  });
+
+  return (
+    <div className="kb-container">
+      <header className="kb-header">
+        <div className="kb-eyebrow">
+          <BookOpen size={15} /> OFFICIAL KNOWLEDGE REPOSITORY
+        </div>
+        <h2>Official College Documents & Regulations</h2>
+        <p>
+          Every answer generated by the assistant is grounded in these verified MITAOE handbooks,
+          examination manuals, and academic policies. Click any question below to ask the assistant.
+        </p>
+
+        {/* Categories & Search */}
+        <div className="kb-controls">
+          <div className="kb-tabs">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`kb-tab ${activeCategory === cat ? "active" : ""}`}
+                onClick={() => setActiveCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <input
+            type="text"
+            className="kb-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search regulations, topics, or questions..."
+          />
+        </div>
+      </header>
+
+      <div className="kb-grid">
+        {filteredDocs.map((doc) => (
+          <article key={doc.id} className="kb-card">
+            <div className="kb-card-top">
+              <div className="kb-card-badge">{doc.category}</div>
+              <div className="kb-card-version">v{doc.version} · {doc.pages} pages</div>
+            </div>
+
+            <div className="kb-card-title">
+              <FileText size={18} />
+              <h3>{doc.title}</h3>
+            </div>
+
+            <p className="kb-card-desc">{doc.description}</p>
+
+            <div className="kb-questions-block">
+              <div className="kb-questions-label">
+                <HelpCircle size={14} /> Common Questions in this Document:
+              </div>
+              <ul className="kb-questions-list">
+                {doc.sampleQuestions.map((q) => (
+                  <li key={q}>
+                    <button
+                      type="button"
+                      className="kb-question-btn"
+                      onClick={() => onSelectQuestion(q)}
+                    >
+                      <span>{q}</span>
+                      <ArrowRight size={14} className="kb-q-arrow" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="kb-footer-note">
+        <CheckCircle2 size={16} />
+        <span>
+          Are you an administrator looking to upload new document versions? Log in to the{" "}
+          <a href="http://localhost:5174" target="_blank" rel="noreferrer">
+            Admin Portal (Port 5174)
+          </a>.
+        </span>
+      </div>
+    </div>
+  );
+}

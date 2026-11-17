@@ -40,6 +40,7 @@ class QdrantVectorStore(BaseVectorStore):
                 url=url,
                 api_key=api_key,
                 timeout=self._timeout,
+                check_compatibility=False,
             )
             self._owns_client = True
 

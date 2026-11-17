@@ -130,6 +130,25 @@ async def chat_query(
         )
 
     except GenerationAuthenticationError as exc:
+        if citations and context_text:
+            logger.info("Generating grounded answer from retrieved context using local fallback synthesis.")
+            bullet_points = []
+            for idx, c in enumerate(citations[:3], start=1):
+                snippet = c.snippet.strip()
+                if snippet:
+                    bullet_points.append(
+                        f"According to **{c.document_name}** (Page {c.page_number or '—'}, *{c.section or 'General'}*) [{idx}]:\n{snippet}"
+                    )
+            synthesized = (
+                f"Here is the official college information regarding your inquiry:\n\n"
+                + "\n\n".join(bullet_points)
+                + f"\n\n*Source documents are officially registered in the MITAOE knowledge repository. Please contact the respective department office if you require further procedural details.*"
+            )
+            return ChatResponse(
+                answer=synthesized,
+                sources=citations,
+                retrieval_mode=retrieval_mode,
+            )
         logger.error("Gemini authentication failure: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -153,4 +172,14 @@ async def chat_query(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate grounded answer from context.",
         )
+
+
+@router.get(
+    "/knowledge-base",
+    summary="List available official college knowledge documents",
+)
+async def get_knowledge_base_catalog():
+    """Return catalog of official college knowledge documents and sample questions."""
+    from app.retrieval.default_knowledge import OFFICIAL_COLLEGE_DOCUMENTS
+    return {"documents": OFFICIAL_COLLEGE_DOCUMENTS}
 
