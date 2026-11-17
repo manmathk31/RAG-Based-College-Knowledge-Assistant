@@ -1,7 +1,7 @@
 """Abstract interface for text embedding services."""
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 
 class BaseEmbeddingService(ABC):
@@ -32,7 +32,12 @@ class BaseEmbeddingService(ABC):
         pass
 
     @abstractmethod
-    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    async def embed_batch(
+        self,
+        texts: List[str],
+        batch_size: Optional[int] = None,
+        **kwargs,
+    ) -> List[List[float]]:
         """Generate embedding vectors for a batch of text strings.
 
         Args:

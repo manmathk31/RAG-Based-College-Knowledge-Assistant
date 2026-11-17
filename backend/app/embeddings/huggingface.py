@@ -77,10 +77,20 @@ class HuggingFaceEmbeddingService(BaseEmbeddingService):
             raise EmbeddingError("Failed to obtain embedding from provider for single text input.")
         return embeddings[0]
 
-    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    # Backward-compatible alias
+    embed_single = embed_text
+
+    async def embed_batch(
+        self,
+        texts: List[str],
+        batch_size: Optional[int] = None,
+        **kwargs,
+    ) -> List[List[float]]:
         """Generate embedding vectors for a batch of text strings with chunked batching."""
         if not texts:
             return []
+
+        effective_batch_size = batch_size or self._batch_size
 
         # Validate each item
         for idx, text in enumerate(texts):
@@ -90,7 +100,7 @@ class HuggingFaceEmbeddingService(BaseEmbeddingService):
         all_embeddings: List[List[float]] = []
 
         # Process in batches to respect provider payload limits
-        for start_idx in range(0, len(texts), self._batch_size):
+        for start_idx in range(0, len(texts), effective_batch_size):
             chunk = texts[start_idx : start_idx + self._batch_size]
             batch_result = await self._call_with_retries(chunk)
             all_embeddings.extend(batch_result)

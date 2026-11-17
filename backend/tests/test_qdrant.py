@@ -43,11 +43,16 @@ async def test_create_collection_when_not_exists(test_store_settings: Settings) 
     assert call_kwargs["vectors_config"].size == 384
     assert call_kwargs["vectors_config"].distance == models.Distance.COSINE
 
-    # Verify payload index creation for document_id
-    mock_client.create_payload_index.assert_called_once_with(
+    # Verify payload index creation for document_id and is_active
+    mock_client.create_payload_index.assert_any_call(
         collection_name="test_col",
         field_name="document_id",
         field_schema=models.PayloadSchemaType.KEYWORD,
+    )
+    mock_client.create_payload_index.assert_any_call(
+        collection_name="test_col",
+        field_name="is_active",
+        field_schema=models.PayloadSchemaType.BOOL,
     )
 
 

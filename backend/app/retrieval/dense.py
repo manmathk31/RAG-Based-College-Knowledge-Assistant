@@ -39,7 +39,13 @@ class DenseRetriever:
 
         try:
             # 1. Embed query vector
-            query_vector = await self._embedding_service.embed_single(query.strip())
+            embed_fn = getattr(self._embedding_service, "embed_single", None) or getattr(
+                self._embedding_service, "embed_text", None
+            )
+            if embed_fn is not None:
+                query_vector = await embed_fn(query.strip())
+            else:
+                query_vector = (await self._embedding_service.embed_batch([query.strip()]))[0]
 
             # 2. Vector search in Qdrant with active-version filter
             collection_name = self._settings.QDRANT_COLLECTION_NAME
