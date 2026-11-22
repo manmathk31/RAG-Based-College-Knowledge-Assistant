@@ -15,6 +15,7 @@ import {
 import { fetchHealth, sendChatQuery } from "./services/api";
 import type { ChatTurn, HealthStatus, SourceCitation } from "./types/api";
 import { Logo } from "./components/Logo";
+import MarkdownRenderer from "./components/MarkdownRenderer";
 
 interface Message {
   id: string;
@@ -230,50 +231,14 @@ export default function App() {
     }
   };
 
-  // Structured prose rendering for assistant answers
-  const renderFormattedProse = (text: string) => {
-    const lines = text.split("\n");
-    return lines.map((line, idx) => {
-      if (!line.trim()) {
-        return <div key={idx} style={{ height: "6px" }} />;
-      }
-
-      // Bullet List
-      if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
-        return (
-          <li key={idx} style={{ marginLeft: "18px", listStyleType: "disc", marginBottom: "4px" }}>
-            {formatBold(line.trim().slice(2))}
-          </li>
-        );
-      }
-
-      // Numbered List
-      const numberedMatch = line.trim().match(/^(\d+)\.\s+(.*)/);
-      if (numberedMatch) {
-        return (
-          <div key={idx} style={{ display: "flex", gap: "8px", marginBottom: "4px", paddingLeft: "4px" }}>
-            <span style={{ fontWeight: 600, color: "var(--accent)" }}>{numberedMatch[1]}.</span>
-            <span>{formatBold(numberedMatch[2])}</span>
-          </div>
-        );
-      }
-
-      return (
-        <p key={idx} style={{ marginBottom: "8px" }}>
-          {formatBold(line)}
-        </p>
-      );
-    });
-  };
-
-  const formatBold = (str: string) => {
-    const parts = str.split(/(\*\*.*?\*\*)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={i}>{part.slice(2, -2)}</strong>;
-      }
-      return part;
-    });
+  const handleCitationNumClick = (numStr: string, sources?: SourceCitation[]) => {
+    if (!sources || sources.length === 0) return;
+    const idx = parseInt(numStr, 10) - 1;
+    if (sources[idx]) {
+      setSelectedCitation(sources[idx]);
+    } else if (sources[0]) {
+      setSelectedCitation(sources[0]);
+    }
   };
 
   return (
@@ -361,9 +326,10 @@ export default function App() {
                   <div className="user-bubble">{m.content}</div>
                 ) : (
                   <div className="assistant-body">
-                    <div className="assistant-prose">
-                      {renderFormattedProse(m.content)}
-                    </div>
+                    <MarkdownRenderer
+                      content={m.content}
+                      onCitationClick={(num) => handleCitationNumClick(num, m.sources)}
+                    />
 
                     {/* Source Citations Badges */}
                     {m.sources && m.sources.length > 0 && (
