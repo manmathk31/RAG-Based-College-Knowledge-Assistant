@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
-  Bot,
   GraduationCap,
   Menu,
   MessageSquare,
@@ -17,13 +16,19 @@ import {
   LogOut,
   Copy,
   Check,
-  Trash2
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  RotateCcw,
+  Languages,
+  BarChart3
 } from "lucide-react";
 import { fetchHealth, sendChatQuery } from "./services/api";
 import type { ChatTurn, HealthStatus, SourceCitation } from "./types/api";
 import type { Student } from "./services/auth";
 import KnowledgeBase from "./components/KnowledgeBase";
 import MarkdownRenderer from "./components/MarkdownRenderer";
+import NlpLab from "./components/NlpLab";
 
 interface AppProps {
   student: Student | null;
@@ -48,25 +53,73 @@ interface ConversationSession {
   updatedAt: string;
 }
 
-const suggestions = [
-  "What is the minimum attendance requirement?",
-  "Explain the exam revaluation process",
-  "Where can I find scholarship information?",
-  "What hostel facilities are available?"
-];
+export type SupportedLang = "en" | "mr" | "hi";
+
+const languageConfigs: Record<
+  SupportedLang,
+  {
+    name: string;
+    nativeName: string;
+    placeholder: string;
+    welcomeHeading: string;
+    welcomeSub: string;
+    suggestions: string[];
+  }
+> = {
+  en: {
+    name: "English",
+    nativeName: "English",
+    placeholder: "Ask about admissions, attendance policy, exams, fees, scholarships, or hostels...",
+    welcomeHeading: "How can we help",
+    welcomeSub: "you today?",
+    suggestions: [
+      "What is the minimum attendance requirement?",
+      "Explain the exam revaluation process",
+      "Where can I find scholarship information?",
+      "What hostel facilities are available?",
+    ],
+  },
+  mr: {
+    name: "Marathi",
+    nativeName: "मराठी",
+    placeholder: "प्रवेश, उपस्थिती नियम, परीक्षा, फी, शिष्यवृत्ती किंवा वसतिगृहाबद्दल विचारा...",
+    welcomeHeading: "आम्ही तुम्हाला कशी",
+    welcomeSub: "मदत करू शकतो?",
+    suggestions: [
+      "किमान उपस्थितीचे नियम काय आहेत?",
+      "परीक्षा पुनर्मूल्यांकन प्रक्रिया सांगा",
+      "शिष्यवृत्ती योजनांची माहिती कुठे मिळेल?",
+      "वसतिगृहात कोणत्या सुविधा उपलब्ध आहेत?",
+    ],
+  },
+  hi: {
+    name: "Hindi",
+    nativeName: "हिंदी",
+    placeholder: "प्रवेश, उपस्थिति नियम, परीक्षा, फीस, छात्रवृत्ति या छात्रावास के बारे में पूछें...",
+    welcomeHeading: "आज हम आपकी क्या",
+    welcomeSub: "सहायता कर सकते हैं?",
+    suggestions: [
+      "न्यूनतम उपस्थिति नियम क्या हैं?",
+      "परीक्षा पुनर्मूल्यांकन प्रक्रिया समझाइए",
+      "छात्रवृत्ति जानकारी कहाँ मिल सकती है?",
+      "छात्रावास में क्या सुविधाएं उपलब्ध हैं?",
+    ],
+  },
+};
 
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppProps) {
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [healthError, setHealthError] = useState(false);
+  const [language, setLanguage] = useState<SupportedLang>("en");
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "knowledge">("chat");
-  const [activeSources, setActiveSources] = useState<string | null>(null);
-  const [highlightedCite, setHighlightedCite] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"chat" | "knowledge" | "nlp">("chat");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+  const [selectedExcerpt, setSelectedExcerpt] = useState<SourceCitation | null>(null);
 
   // Active chat messages
   const [messages, setMessages] = useState<Message[]>([]);
@@ -142,7 +195,6 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
     }
     setMessages([]);
     setQuestion("");
-    setActiveSources(null);
     setActiveTab("chat");
     setMobileOpen(false);
   };
@@ -190,7 +242,7 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
     setBusy(true);
 
     try {
-      const result = await sendChatQuery({ message: clean, history: prior });
+      const result = await sendChatQuery({ message: clean, history: prior, language });
       setMessages((m) => [
         ...m,
         {
@@ -409,6 +461,22 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
               <ShieldCheck size={15} /> Official Institute Information
             </span>
 
+            {/* Language Switcher Pill */}
+            <div className="top-lang-switch">
+              {(["en", "mr", "hi"] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  className={`top-lang-btn ${language === l ? "active" : ""}`}
+                  onClick={() => setLanguage(l)}
+                  title={`Switch language to ${languageConfigs[l].name}`}
+                >
+                  <Languages size={13} className="lang-icon" />
+                  <span>{languageConfigs[l].nativeName}</span>
+                </button>
+              ))}
+            </div>
+
             {/* User Profile in Topbar (NO confusing random 'S' symbol!) */}
             {student ? (
               <div className="top-user-pill">
@@ -471,8 +539,8 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
                     <Sparkles size={14} /> MIT ACADEMY OF ENGINEERING
                   </div>
                   <h1>
-                    How can we help<br />
-                    <span>you today?</span>
+                    {languageConfigs[language].welcomeHeading}<br />
+                    <span>{languageConfigs[language].welcomeSub}</span>
                   </h1>
                   <p className="welcome-copy">
                     Ask about admissions, academic policies, attendance criteria, examinations,
@@ -481,7 +549,7 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
                   </p>
 
                   <div className="suggestion-grid">
-                    {suggestions.map((s, i) => (
+                    {languageConfigs[language].suggestions.map((s, i) => (
                       <button key={s} className="suggestion" onClick={() => ask(s)}>
                         <span className="suggestion-icon">
                           {[
@@ -507,118 +575,119 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
                 </div>
               ) : (
                 <div className="message-list">
-                  {messages.map((m) => (
-                    <article key={m.id} className={`message-row ${m.role}`}>
-                      {/* Avatar for each message (Bot for assistant, User icon / initials for user) */}
-                      <div className={`message-avatar ${m.role}`}>
-                        {m.role === "assistant" ? (
-                          <Bot size={19} />
-                        ) : student ? (
-                          <span>{studentInitials || "ST"}</span>
-                        ) : (
-                          <User size={17} />
-                        )}
-                      </div>
-
-                      <div className="message-content">
-                        <div className="message-meta">
-                          {m.role === "assistant"
-                            ? "College Knowledge Assistant"
-                            : student
-                            ? `${student.full_name} (Student)`
-                            : "You (Guest)"}
-                          <span>{m.time}</span>
-                        </div>
-
-                        <div className="message-bubble">
-                          {m.role === "assistant" ? (
+                  {messages.map((m) =>
+                    m.role === "user" ? (
+                      <article key={m.id} className="message-row user">
+                        <div className="user-bubble">{m.content}</div>
+                      </article>
+                    ) : (
+                      <article key={m.id} className="message-row assistant">
+                        <div className="assistant-content">
+                          <div className="assistant-body">
                             <MarkdownRenderer
                               content={m.content}
                               onCitationClick={(citeNum) => {
-                                setActiveSources(m.id);
-                                setHighlightedCite(citeNum);
+                                const idx = parseInt(citeNum, 10) - 1;
+                                const found = (m.sources && m.sources[idx]) || m.sources?.[0];
+                                if (found) setSelectedExcerpt(found);
                               }}
                             />
-                          ) : (
-                            m.content
+                          </div>
+
+                          {/* Sources consulted pill & grid */}
+                          {!!m.sources?.length && (
+                            <div className="sources-wrapper">
+                              <button
+                                type="button"
+                                className="sources-consulted-btn"
+                                onClick={() =>
+                                  setExpandedSources((prev) => ({
+                                    ...prev,
+                                    [m.id]: prev[m.id] === undefined ? false : !prev[m.id],
+                                  }))
+                                }
+                              >
+                                <BookOpen size={15} />
+                                <span>{m.sources.length} sources consulted</span>
+                                {(expandedSources[m.id] ?? true) ? (
+                                  <ChevronUp size={15} />
+                                ) : (
+                                  <ChevronDown size={15} />
+                                )}
+                              </button>
+
+                              {(expandedSources[m.id] ?? true) && (
+                                <div className="sources-pill-grid">
+                                  {m.sources.map((s, sIdx) => {
+                                    const cleanTitle = s.document_name.replace(/\.pdf$/i, "");
+                                    return (
+                                      <button
+                                        key={`${s.chunk_id || sIdx}-${sIdx}`}
+                                        type="button"
+                                        className="source-card-pill"
+                                        onClick={() => setSelectedExcerpt(s)}
+                                        title={`${s.document_name}${s.section ? ` - ${s.section}` : ""}`}
+                                      >
+                                        <FileText size={15} className="source-pill-icon" />
+                                        <span className="source-pill-title">{cleanTitle}</span>
+                                        {s.page_number && (
+                                          <span className="source-pill-page">p. {s.page_number}</span>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           )}
 
-                          {m.role === "assistant" && (
+                          {/* Action row: Copy & Retry */}
+                          <div className="assistant-actions-row">
                             <button
                               type="button"
-                              className="copy-btn"
+                              className="action-text-btn"
                               onClick={() => copyToClipboard(m.id, m.content)}
-                              title="Copy answer to clipboard"
+                              title="Copy answer"
                             >
                               {copiedId === m.id ? (
                                 <>
-                                  <Check size={13} /> <span>Copied</span>
+                                  <Check size={14} />
+                                  <span>Copied</span>
                                 </>
                               ) : (
                                 <>
-                                  <Copy size={13} /> <span>Copy</span>
+                                  <Copy size={14} />
+                                  <span>Copy</span>
                                 </>
                               )}
                             </button>
-                          )}
-                        </div>
 
-                        {/* Citations and Sources block */}
-                        {m.role === "assistant" && !!m.sources?.length && (
-                          <div className="sources-block">
                             <button
                               type="button"
-                              className="sources-heading"
-                              onClick={() =>
-                                setActiveSources(activeSources === m.id ? null : m.id)
-                              }
+                              className="action-text-btn"
+                              onClick={() => {
+                                const mIdx = messages.findIndex((item) => item.id === m.id);
+                                if (mIdx > 0) {
+                                  const prior = [...messages.slice(0, mIdx)]
+                                    .reverse()
+                                    .find((item) => item.role === "user");
+                                  if (prior) void ask(prior.content);
+                                }
+                              }}
+                              title="Retry answer generation"
                             >
-                              <BookOpen size={15} /> Sources consulted ({m.sources.length})
-                              <span>{activeSources === m.id ? "−" : "+"}</span>
+                              <RotateCcw size={14} />
+                              <span>Retry</span>
                             </button>
-
-                            {(activeSources === m.id ? m.sources : m.sources.slice(0, 2)).map(
-                              (s, idx) => {
-                                const citeNum = s.citation_id || String(idx + 1);
-                                const isHighlighted =
-                                  activeSources === m.id && highlightedCite === citeNum;
-
-                                return (
-                                  <div
-                                    className={`source-card ${isHighlighted ? "highlighted" : ""}`}
-                                    key={s.citation_id + s.chunk_id}
-                                  >
-                                    <div className="source-file">
-                                      <span className="source-num-badge">[{citeNum}]</span>
-                                      <FileText size={15} />
-                                      <b>{s.document_name}</b>
-                                      <span>Page {s.page_number ?? "—"}</span>
-                                    </div>
-                                    {s.section && <small className="source-sec">{s.section}</small>}
-                                    <p>{s.snippet}</p>
-                                  </div>
-                                );
-                              }
-                            )}
                           </div>
-                        )}
-
-                        {m.role === "assistant" && m.mode && (
-                          <div className="retrieval-tag">
-                            Strategy: {m.mode.replace("_", " ")}
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  ))}
+                        </div>
+                      </article>
+                    )
+                  )}
 
                   {busy && (
                     <article className="message-row assistant">
-                      <div className="message-avatar assistant">
-                        <Bot size={19} />
-                      </div>
-                      <div className="message-content">
-                        <div className="message-meta">College Knowledge Assistant</div>
+                      <div className="assistant-content">
                         <div className="typing">
                           <i />
                           <i />
@@ -650,7 +719,7 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
                       void ask(question);
                     }
                   }}
-                  placeholder="Ask about admissions, attendance policy, exams, fees, scholarships, or hostels..."
+                  placeholder={languageConfigs[language].placeholder}
                   rows={1}
                   maxLength={2000}
                 />
@@ -675,6 +744,52 @@ export default function App({ student, isGuest, onOpenLogin, onSignOut }: AppPro
               </div>
             </footer>
           </>
+        )}
+
+        {/* Official Document Excerpt Modal */}
+        {selectedExcerpt && (
+          <div className="excerpt-backdrop" onClick={() => setSelectedExcerpt(null)}>
+            <div className="excerpt-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="excerpt-header">
+                <div className="excerpt-header-info">
+                  <div className="excerpt-header-icon">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <b>{selectedExcerpt.document_name}</b>
+                    <small>
+                      {selectedExcerpt.section ? `${selectedExcerpt.section} · ` : ""}
+                      {selectedExcerpt.page_number ? `Page ${selectedExcerpt.page_number}` : "Official Document"}
+                    </small>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="excerpt-close-btn"
+                  onClick={() => setSelectedExcerpt(null)}
+                  aria-label="Close excerpt"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="excerpt-body">
+                <span className="excerpt-tag">Official Quoted Excerpt</span>
+                <p className="excerpt-snippet">"{selectedExcerpt.snippet}"</p>
+              </div>
+
+              <div className="excerpt-footer">
+                <span>Directly retrieved from MITAOE official regulations</span>
+                <button
+                  type="button"
+                  className="excerpt-done-btn"
+                  onClick={() => setSelectedExcerpt(null)}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

@@ -41,7 +41,7 @@ function Root() {
     setShowLoginModal(false);
     try {
       sessionStorage.removeItem("mitaoe_guest_entry");
-    } catch {}
+    } catch { }
   };
 
   const handleContinueAsGuest = () => {
@@ -50,7 +50,7 @@ function Root() {
     setShowLoginModal(false);
     try {
       sessionStorage.setItem("mitaoe_guest_entry", "true");
-    } catch {}
+    } catch { }
   };
 
   const handleSignOut = async () => {
@@ -62,7 +62,7 @@ function Root() {
       setIsGuest(false);
       try {
         sessionStorage.removeItem("mitaoe_guest_entry");
-      } catch {}
+      } catch { }
     }
   };
 

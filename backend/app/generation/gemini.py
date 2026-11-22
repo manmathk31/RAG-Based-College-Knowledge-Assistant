@@ -24,11 +24,13 @@ Your task is to answer the student's question accurately using ONLY the provided
 
 Strict Grounding Rules:
 1. Base your answer strictly on the provided document excerpts.
-2. Every factual statement must cite its source excerpt using bracketed numeric markers like [1], [2] corresponding to the excerpt numbers provided.
+2. Structure your answer clearly:
+   - Begin with a direct summary sentence (e.g. "Based on the official college documents, the [topic] are as follows:").
+   - Follow with concise bullet points (•) highlighting key rules, percentages, criteria, and deadlines using markdown bold (**text**).
+   - End each factual bullet or statement with exact citation markers like [1], [2] corresponding to the excerpt numbers.
 3. If the provided excerpts do not contain sufficient information to answer the question, clearly state: "I could not find information regarding this in the official college documents."
 4. Never speculate, assume, or extrapolate facts, dates, course codes, deadlines, or fees that are not explicitly stated in the context.
-5. Distinguish explicitly stated facts from helpful general explanations.
-6. Keep responses clear, concise, well-structured, and helpful for college students."""
+5. Keep responses clean, concise, polite, and immediately readable for students."""
 
 
 class GeminiGenerationService(BaseGenerationService):
@@ -60,6 +62,7 @@ class GeminiGenerationService(BaseGenerationService):
         query: str,
         context_text: str,
         history: Optional[List[Dict[str, str]]] = None,
+        language: str = "en",
     ) -> str:
         """Generate grounded answer using Gemini API with bounded exponential retries."""
         if not self._client:
@@ -72,6 +75,10 @@ class GeminiGenerationService(BaseGenerationService):
 
         # If no context was retrieved, return standard honest grounded fallback
         if not context_text or not context_text.strip():
+            if language in ["mr", "marathi"]:
+                return "मला अधिकृत महाविद्यालयीन कागदपत्रांमध्ये तुमच्या प्रश्नाबद्दल माहिती आढळली नाही."
+            elif language in ["hi", "hindi"]:
+                return "मुझे आधिकारिक कॉलेज दस्तावेजों में आपके प्रश्न के संबंध में जानकारी नहीं मिली।"
             return "I could not find information regarding your question in the official college documents."
 
         # Construct prompt contents
@@ -89,7 +96,24 @@ class GeminiGenerationService(BaseGenerationService):
         prompt_parts.append(context_text.strip())
         prompt_parts.append("---")
         prompt_parts.append(f"Student Question: {query.strip()}")
-        prompt_parts.append("Please provide a helpful, grounded answer citing sources with [1], [2] where appropriate:")
+
+        lang_clean = (language or "en").lower().strip()
+        if lang_clean in ["mr", "marathi"]:
+            prompt_parts.append(
+                "Language Instruction: Please answer fluently in MARATHI (मराठी). Translate the grounded facts accurately, "
+                "keeping technical/academic terms (like ESE, ISE, CGPA, ATKT, MahaDBT, TFWS) clear and recognizable. "
+                "Structure your answer with clean bullet points (•) and bold key numbers/percentages. "
+                "Retain bracketed numeric citations like [1], [2] at the end of each factual statement."
+            )
+        elif lang_clean in ["hi", "hindi"]:
+            prompt_parts.append(
+                "Language Instruction: Please answer fluently in HINDI (हिंदी). Translate the grounded facts accurately, "
+                "keeping technical/academic terms (like ESE, ISE, CGPA, ATKT, MahaDBT, TFWS) clear and recognizable. "
+                "Structure your answer with clean bullet points (•) and bold key numbers/percentages. "
+                "Retain bracketed numeric citations like [1], [2] at the end of each factual statement."
+            )
+        else:
+            prompt_parts.append("Please provide a helpful, grounded answer in English citing sources with [1], [2] where appropriate:")
 
         full_prompt = "\n\n".join(prompt_parts)
 

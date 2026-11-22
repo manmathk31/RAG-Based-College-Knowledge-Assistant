@@ -339,37 +339,79 @@ DEFAULT_KNOWLEDGE_CHUNKS: List[Dict[str, Any]] = [
 ]
 
 
+DEV_TO_EN_KEYWORDS = {
+    "उपस्थिती": "attendance",
+    "उपस्थिति": "attendance",
+    "हजेरी": "attendance",
+    "किमान": "minimum",
+    "न्यूनतम": "minimum",
+    "नियम": "regulation",
+    "परीक्षा": "examination",
+    "पुनर्मूल्यांकन": "revaluation",
+    "गुण": "evaluation",
+    "अंक": "marks",
+    "शिष्यवृत्ती": "scholarship",
+    "छात्रवृत्ति": "scholarship",
+    "वसतिगृह": "hostel",
+    "छात्रावास": "hostel",
+    "मेस": "mess",
+    "जेवण": "mess",
+    "भोजन": "dining",
+    "प्रवेश": "admission",
+    "पात्रता": "eligibility",
+    "शुल्क": "fee",
+    "फीस": "fee",
+    "फी": "fee",
+    "प्लेसमेंट": "placement",
+    "नोकरी": "placement",
+    "पॅकेज": "package",
+    "वैद्यकीय": "medical",
+    "रजा": "leave",
+}
+
+
 def search_default_knowledge(query: str, limit: int = 5) -> List[RetrievalCandidate]:
-    """Search the built-in college knowledge base using token overlap and keyword relevance."""
+    """Search the built-in college knowledge base using token overlap and keyword relevance,
+    returning up to `limit` relevant sources with multilingual Marathi/Hindi query support."""
     if not query or not query.strip():
         return []
 
-    query_tokens = set(query.lower().replace("?", "").replace(",", "").replace(".", "").split())
+    raw_tokens = set(query.lower().replace("?", "").replace(",", "").replace(".", "").split())
     # remove short noise words
-    noise = {"is", "the", "what", "are", "how", "where", "can", "in", "for", "a", "an", "and", "to", "of", "do", "i"}
-    meaningful = [t for t in query_tokens if t not in noise and len(t) > 2]
+    noise = {"is", "the", "what", "are", "how", "where", "can", "in", "for", "a", "an", "and", "to", "of", "do", "i", "tell", "me", "about", "काय", "आहे", "आहेत", "सांगा", "माहिती", "क्या", "है", "हैं", "बताएं", "जानकारी"}
+    meaningful = [t for t in raw_tokens if t not in noise and len(t) > 1]
     if not meaningful:
-        meaningful = list(query_tokens)
+        meaningful = list(raw_tokens)
+
+    # Expand Devanagari tokens with English equivalents
+    expanded_tokens = list(meaningful)
+    for t in meaningful:
+        for dev_k, en_v in DEV_TO_EN_KEYWORDS.items():
+            if dev_k in t or t in dev_k:
+                if en_v not in expanded_tokens:
+                    expanded_tokens.append(en_v)
 
     scored_candidates = []
+    seen_chunk_ids = set()
+
     for chunk in DEFAULT_KNOWLEDGE_CHUNKS:
         score = 0.0
         content_lower = chunk["content"].lower()
         section_lower = chunk["section"].lower()
         keywords = chunk.get("keywords", [])
 
-        # Match meaningful tokens
-        for token in meaningful:
+        # Match meaningful and expanded tokens
+        for token in expanded_tokens:
             if token in section_lower:
-                score += 3.0
+                score += 3.5
             if any(token in kw for kw in keywords):
-                score += 2.5
+                score += 3.0
             if token in content_lower:
-                score += 1.0
+                score += 1.5
 
         # Exact phrase bonus
         if query.lower().strip() in content_lower or query.lower().strip() in section_lower:
-            score += 5.0
+            score += 6.0
 
         if score > 0:
             candidate = RetrievalCandidate(
@@ -384,6 +426,28 @@ def search_default_knowledge(query: str, limit: int = 5) -> List[RetrievalCandid
                 retrieval_source="knowledge_base",
             )
             scored_candidates.append(candidate)
+            seen_chunk_ids.add(chunk["chunk_id"])
 
     scored_candidates.sort(key=lambda c: c.score, reverse=True)
+
+    # Pad with related default knowledge chunks up to limit if we have fewer matches
+    if len(scored_candidates) < limit:
+        for chunk in DEFAULT_KNOWLEDGE_CHUNKS:
+            if chunk["chunk_id"] not in seen_chunk_ids:
+                candidate = RetrievalCandidate(
+                    chunk_id=chunk["chunk_id"],
+                    document_id=chunk["document_id"],
+                    document_name=chunk["document_name"],
+                    document_version=chunk["document_version"],
+                    page_number=chunk["page_number"],
+                    section=chunk["section"],
+                    content=chunk["content"],
+                    score=0.1,
+                    retrieval_source="knowledge_base",
+                )
+                scored_candidates.append(candidate)
+                seen_chunk_ids.add(chunk["chunk_id"])
+                if len(scored_candidates) >= limit:
+                    break
+
     return scored_candidates[:limit]

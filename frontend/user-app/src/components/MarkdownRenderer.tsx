@@ -73,12 +73,12 @@ export default function MarkdownRenderer({ content, onCitationClick }: MarkdownR
         }
 
         // List items
-        if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || /^\d+\.\s/.test(trimmed)) {
+        if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ") || /^\d+\.\s/.test(trimmed)) {
           const lines = trimmed.split("\n");
           return (
             <ul key={idx} className="md-list">
               {lines.map((line, lIdx) => {
-                const clean = line.replace(/^[-*]\s+|\d+\.\s+/, "");
+                const clean = line.replace(/^[-*•]\s+|\d+\.\s+/, "");
                 return <li key={lIdx}>{renderInline(clean)}</li>;
               })}
             </ul>

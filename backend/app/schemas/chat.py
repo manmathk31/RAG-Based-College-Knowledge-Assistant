@@ -31,6 +31,10 @@ class ChatRequest(BaseModel):
         max_length=10,
         description="Up to 10 recent conversation turns for context",
     )
+    language: Optional[str] = Field(
+        default="en",
+        description="Preferred response language: 'en' (English), 'mr' (Marathi), 'hi' (Hindi)",
+    )
 
     @field_validator("message", mode="before")
     @classmethod

@@ -13,6 +13,7 @@ class BaseGenerationService(ABC):
         query: str,
         context_text: str,
         history: Optional[List[Dict[str, str]]] = None,
+        language: str = "en",
     ) -> str:
         """Generate a grounded answer based on query, document context, and optional history.
 

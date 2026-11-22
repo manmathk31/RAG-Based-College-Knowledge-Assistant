@@ -13,6 +13,7 @@ export interface ChatTurn {
 export interface ChatRequest {
   message: string;
   history?: ChatTurn[];
+  language?: string;
 }
 
 export interface SourceCitation {
