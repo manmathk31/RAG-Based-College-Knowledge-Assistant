@@ -28,6 +28,7 @@ class PDFExtractor(BaseExtractor):
         self._ocr_enabled = self._settings.OCR_ENABLED
         self._ocr_min_chars = self._settings.OCR_MIN_PAGE_CHARS
         self._ocr_dpi = self._settings.OCR_DPI
+        self._ocr_max_pages = getattr(self._settings, "OCR_MAX_PAGES", 15)
         self._ocr_extractor = ocr_extractor or TesseractOCRExtractor(settings=self._settings)
 
     def supports(self, filename: str) -> bool:
@@ -86,6 +87,7 @@ class PDFExtractor(BaseExtractor):
             blocks: List[ExtractedBlock] = []
             warnings: List[str] = []
             current_section = toc_sections[0] if toc_sections else None
+            ocr_pages_processed = 0
 
             for page_index in range(total_pages):
                 page_number = page_index + 1
@@ -100,37 +102,49 @@ class PDFExtractor(BaseExtractor):
                 # Detect scanned page (insufficient selectable text)
                 if page_char_count < self._ocr_min_chars:
                     if self._ocr_enabled:
-                        logger.info(
-                            "Page %d of '%s' has only %d characters (< threshold %d). Applying selective OCR...",
-                            page_number,
-                            filename,
-                            page_char_count,
-                            self._ocr_min_chars,
-                        )
-                        try:
-                            # Render page to medium-res image (150 DPI provides sharp OCR while using ~75% less RAM than 300 DPI)
-                            dpi_val = min(self._ocr_dpi, 150)
-                            pix = page.get_pixmap(dpi=dpi_val)
-                            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                            del pix
-                            ocr_text = self._ocr_extractor.extract_text_from_image(img, page_number=page_number)
-                            del img
-                            import gc
-                            gc.collect()
+                        if ocr_pages_processed >= self._ocr_max_pages:
+                            logger.info(
+                                "Page %d of '%s' skipped OCR (max OCR page limit of %d reached).",
+                                page_number,
+                                filename,
+                                self._ocr_max_pages,
+                            )
+                            page_warnings.append(
+                                f"Page {page_number}: max OCR page threshold ({self._ocr_max_pages}) reached; OCR skipped."
+                            )
+                        else:
+                            logger.info(
+                                "Page %d of '%s' has only %d characters (< threshold %d). Applying selective grayscale OCR...",
+                                page_number,
+                                filename,
+                                page_char_count,
+                                self._ocr_min_chars,
+                            )
+                            try:
+                                # Render page to 1-channel grayscale at 120 DPI (uses ~1.4MB vs ~26MB for 300 DPI RGB)
+                                dpi_val = min(self._ocr_dpi, 120)
+                                pix = page.get_pixmap(dpi=dpi_val, colorspace=pymupdf.csGRAY, alpha=False)
+                                img = Image.frombytes("L", [pix.width, pix.height], pix.samples)
+                                del pix
+                                ocr_text = self._ocr_extractor.extract_text_from_image(img, page_number=page_number)
+                                del img
+                                import gc
+                                gc.collect()
 
-                            if ocr_text:
-                                page_text = ocr_text
-                                page_char_count = len(ocr_text)
-                                is_ocr = True
-                                page_warnings.append(f"Page {page_number}: selective OCR applied ({page_char_count} chars).")
-                            else:
-                                page_warnings.append(f"Page {page_number}: OCR produced no text.")
-                        except Exception as ocr_exc:
-                            logger.warning("OCR failed on page %d of '%s': %s", page_number, filename, ocr_exc)
-                            page_warnings.append(f"Page {page_number}: OCR failed ({ocr_exc}).")
-                            # If OCR was required because text is zero, propagate or log warning
-                            if page_char_count == 0 and total_pages == 1:
-                                raise
+                                ocr_pages_processed += 1
+                                if ocr_text:
+                                    page_text = ocr_text
+                                    page_char_count = len(ocr_text)
+                                    is_ocr = True
+                                    page_warnings.append(f"Page {page_number}: selective OCR applied ({page_char_count} chars).")
+                                else:
+                                    page_warnings.append(f"Page {page_number}: OCR produced no text.")
+                            except Exception as ocr_exc:
+                                logger.warning("OCR failed on page %d of '%s': %s", page_number, filename, ocr_exc)
+                                page_warnings.append(f"Page {page_number}: OCR failed ({ocr_exc}).")
+                                # If OCR was required because text is zero, log warning without crashing
+                                if page_char_count == 0 and total_pages == 1:
+                                    page_text = ""
                     else:
                         page_warnings.append(f"Page {page_number} has sparse text ({page_char_count} chars) and OCR is disabled.")
 

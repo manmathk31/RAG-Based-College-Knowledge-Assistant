@@ -105,7 +105,8 @@ class Settings(BaseSettings):
     TOKENIZER_ENCODING: str = "cl100k_base"
     OCR_ENABLED: bool = True
     OCR_MIN_PAGE_CHARS: int = 50  # Pages with fewer chars trigger selective OCR
-    OCR_DPI: int = 150  # 150 DPI provides sharp OCR while reducing peak RAM by ~75% compared to 300 DPI
+    OCR_DPI: int = 120  # 120 DPI in grayscale requires only ~1.4MB RAM per page (down from 26MB at 300 DPI)
+    OCR_MAX_PAGES: int = 15  # Limit OCR to first 15 scanned pages to prevent runaway memory
     TESSERACT_CMD: str = "tesseract"
 
     model_config = SettingsConfigDict(

@@ -56,7 +56,8 @@ class TesseractOCRExtractor:
 
         try:
             logger.info("Performing OCR on page %d (image size: %dx%d)...", page_number, image.width, image.height)
-            text: str = pytesseract.image_to_string(image)
+            # Use fast LSTM engine mode and skip background color inversion to minimize RAM and execution time
+            text: str = pytesseract.image_to_string(image, config="--oem 1 -c tessedit_do_invert=0")
             clean_text = text.strip()
             logger.debug("OCR extracted %d characters from page %d.", len(clean_text), page_number)
             return clean_text
