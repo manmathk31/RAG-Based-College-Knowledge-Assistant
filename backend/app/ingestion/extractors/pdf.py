@@ -108,10 +108,15 @@ class PDFExtractor(BaseExtractor):
                             self._ocr_min_chars,
                         )
                         try:
-                            # Render page to high-res image
-                            pix = page.get_pixmap(dpi=self._ocr_dpi)
+                            # Render page to medium-res image (150 DPI provides sharp OCR while using ~75% less RAM than 300 DPI)
+                            dpi_val = min(self._ocr_dpi, 150)
+                            pix = page.get_pixmap(dpi=dpi_val)
                             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                            del pix
                             ocr_text = self._ocr_extractor.extract_text_from_image(img, page_number=page_number)
+                            del img
+                            import gc
+                            gc.collect()
 
                             if ocr_text:
                                 page_text = ocr_text

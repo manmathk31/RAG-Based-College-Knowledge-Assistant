@@ -261,6 +261,8 @@ class DocumentIngestionOrchestrator:
                     chunk_contents,
                     batch_size=self._settings.EMBEDDING_BATCH_SIZE,
                 )
+                import gc
+                gc.collect()
 
                 if len(embeddings) != len(chunks):
                     raise DocumentIngestionFailedError(

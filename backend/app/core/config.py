@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: str = "huggingface"
     EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
     EMBEDDING_DIMENSION: int = 384
-    EMBEDDING_BATCH_SIZE: int = 32
+    EMBEDDING_BATCH_SIZE: int = 8
     EMBEDDING_TIMEOUT: float = 30.0
     EMBEDDING_MAX_RETRIES: int = 3
 
@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     TOKENIZER_ENCODING: str = "cl100k_base"
     OCR_ENABLED: bool = True
     OCR_MIN_PAGE_CHARS: int = 50  # Pages with fewer chars trigger selective OCR
-    OCR_DPI: int = 300  # DPI for rendering scanned PDF pages for Tesseract
+    OCR_DPI: int = 150  # 150 DPI provides sharp OCR while reducing peak RAM by ~75% compared to 300 DPI
     TESSERACT_CMD: str = "tesseract"
 
     model_config = SettingsConfigDict(
