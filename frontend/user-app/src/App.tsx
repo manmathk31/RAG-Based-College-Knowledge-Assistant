@@ -8,7 +8,9 @@ import {
   Clock,
   Copy,
   FileText,
+  HelpCircle,
   History,
+  MessageSquare,
   Moon,
   Plus,
   RotateCcw,
@@ -19,7 +21,7 @@ import { fetchHealth, sendChatQuery } from "./services/api";
 import type { ChatTurn, HealthStatus, SourceCitation } from "./types/api";
 import { Logo } from "./components/Logo";
 import MarkdownRenderer from "./components/MarkdownRenderer";
-import { HandbookCatalogModal } from "./components/HandbookCatalogModal";
+import { FaqView } from "./components/FaqView";
 
 interface Message {
   id: string;
@@ -66,6 +68,7 @@ const THEME_KEY = "college_assistant_theme";
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<"chat" | "faq">("chat");
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -73,7 +76,6 @@ export default function App() {
   const [selectedCitation, setSelectedCitation] = useState<SourceCitation | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
 
   const toggleSources = (msgId: string) => {
@@ -282,16 +284,25 @@ export default function App() {
           />
         </div>
 
-        <div className="topbar-right">
+        {/* Navigation Switcher */}
+        <nav className="tab-switcher" aria-label="Main Navigation">
           <button
-            className="icon-btn"
-            onClick={() => setCatalogOpen(true)}
-            aria-label="Official College Handbooks"
-            title="Official Handbooks & Knowledge Catalog"
+            className={`tab-btn ${activeTab === "chat" ? "active" : ""}`}
+            onClick={() => setActiveTab("chat")}
           >
-            <BookOpen size={17} />
+            <MessageSquare size={13} />
+            <span>Chat</span>
           </button>
+          <button
+            className={`tab-btn ${activeTab === "faq" ? "active" : ""}`}
+            onClick={() => setActiveTab("faq")}
+          >
+            <HelpCircle size={13} />
+            <span>Most Asked</span>
+          </button>
+        </nav>
 
+        <div className="topbar-right">
           <button
             className="icon-btn"
             onClick={() => setIsDark((prev) => !prev)}
@@ -308,193 +319,205 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Chat Area */}
-      <main className="chat-scroll-area">
-        <div className="chat-container">
-          {messages.length === 0 ? (
-            /* Welcome Hero */
-            <div className="welcome-hero">
-              <div className="welcome-logo-box">
-                <Logo size={74} animated={true} />
-              </div>
+      {/* Tab Views */}
+      {activeTab === "chat" ? (
+        <>
+          {/* Main Chat Area */}
+          <main className="chat-scroll-area">
+            <div className="chat-container">
+              {messages.length === 0 ? (
+                /* Welcome Hero */
+                <div className="welcome-hero">
+                  <div className="welcome-logo-box">
+                    <Logo size={74} animated={true} />
+                  </div>
 
-              <h1 className="welcome-title">What would you like to know?</h1>
-              <p className="welcome-subtitle">
-                Grounded answers with source citations from verified college documents.
-              </p>
+                  <h1 className="welcome-title">What would you like to know?</h1>
+                  <p className="welcome-subtitle">
+                    Grounded answers with source citations from verified college documents.
+                  </p>
 
-              {/* 4 Starter Cards */}
-              <div className="starter-grid">
-                {STARTER_CARDS.map((card) => (
+                  {/* 4 Starter Cards */}
+                  <div className="starter-grid">
+                    {STARTER_CARDS.map((card) => (
+                      <button
+                        key={card.title}
+                        className="starter-card"
+                        onClick={() => handleSubmit(card.query)}
+                      >
+                        <div className="starter-card-header">
+                          <span className="starter-card-title">{card.title}</span>
+                          <ArrowUp size={14} className="starter-card-arrow" style={{ transform: "rotate(45deg)" }} />
+                        </div>
+                        <span className="starter-card-desc">{card.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Most Asked Quick Launch Banner */}
                   <button
-                    key={card.title}
-                    className="starter-card"
-                    onClick={() => handleSubmit(card.query)}
+                    className="catalog-launch-banner"
+                    onClick={() => setActiveTab("faq")}
                   >
-                    <div className="starter-card-header">
-                      <span className="starter-card-title">{card.title}</span>
-                      <ArrowUp size={14} className="starter-card-arrow" style={{ transform: "rotate(45deg)" }} />
+                    <div className="catalog-launch-icon">
+                      <BookOpen size={15} />
                     </div>
-                    <span className="starter-card-desc">{card.desc}</span>
+                    <div className="catalog-launch-content">
+                      <span className="catalog-launch-title">Browse all 6 Official College Handbooks & FAQs</span>
+                      <span className="catalog-launch-sub">Attendance rules, ATKT, fees, hostels & scholarship guidelines</span>
+                    </div>
+                    <ArrowRight size={14} className="catalog-launch-arrow" />
                   </button>
-                ))}
-              </div>
-
-              {/* Official Catalog Quick Launch */}
-              <button
-                className="catalog-launch-banner"
-                onClick={() => setCatalogOpen(true)}
-              >
-                <div className="catalog-launch-icon">
-                  <BookOpen size={15} />
                 </div>
-                <div className="catalog-launch-content">
-                  <span className="catalog-launch-title">Browse all 6 Official College Handbooks & FAQs</span>
-                  <span className="catalog-launch-sub">Attendance rules, ATKT, fees, hostels & scholarship guidelines</span>
-                </div>
-                <ArrowRight size={14} className="catalog-launch-arrow" />
-              </button>
-            </div>
-          ) : (
-            /* Active Messages */
-            messages.map((m) => (
-              <div key={m.id} className={`message-item ${m.role}`}>
-                {m.role === "user" ? (
-                  <div className="user-bubble">{m.content}</div>
-                ) : (
-                  <div className="assistant-body">
-                    <MarkdownRenderer
-                      content={m.content}
-                      onCitationClick={(num) => handleCitationNumClick(num, m.sources, m.id)}
-                    />
+              ) : (
+                /* Active Messages */
+                messages.map((m) => (
+                  <div key={m.id} className={`message-item ${m.role}`}>
+                    {m.role === "user" ? (
+                      <div className="user-bubble">{m.content}</div>
+                    ) : (
+                      <div className="assistant-body">
+                        <MarkdownRenderer
+                          content={m.content}
+                          onCitationClick={(num) => handleCitationNumClick(num, m.sources, m.id)}
+                        />
 
-                    {/* Minimized & Expandable Source Citations */}
-                    {m.sources && m.sources.length > 0 && (
-                      <div className="sources-container">
-                        <button
-                          className={`sources-toggle-btn ${expandedSources[m.id] ? "expanded" : ""}`}
-                          onClick={() => toggleSources(m.id)}
-                          title={expandedSources[m.id] ? "Collapse sources" : "Expand sources consulted"}
-                        >
-                          <BookOpen size={11} className="source-toggle-icon" />
-                          <span className="source-toggle-label">
-                            {m.sources.length} {m.sources.length === 1 ? "source" : "sources"} consulted
-                          </span>
-                          <ChevronDown
-                            size={12}
-                            className={`source-toggle-chevron ${expandedSources[m.id] ? "rotated" : ""}`}
-                          />
-                        </button>
+                        {/* Minimized & Expandable Source Citations */}
+                        {m.sources && m.sources.length > 0 && (
+                          <div className="sources-container">
+                            <button
+                              className={`sources-toggle-btn ${expandedSources[m.id] ? "expanded" : ""}`}
+                              onClick={() => toggleSources(m.id)}
+                              title={expandedSources[m.id] ? "Collapse sources" : "Expand sources consulted"}
+                            >
+                              <BookOpen size={11} className="source-toggle-icon" />
+                              <span className="source-toggle-label">
+                                {m.sources.length} {m.sources.length === 1 ? "source" : "sources"} consulted
+                              </span>
+                              <ChevronDown
+                                size={12}
+                                className={`source-toggle-chevron ${expandedSources[m.id] ? "rotated" : ""}`}
+                              />
+                            </button>
 
-                        {expandedSources[m.id] && (
-                          <div className="sources-row animated-expand">
-                            {m.sources.map((src, i) => (
-                              <button
-                                key={src.citation_id || `${src.chunk_id}-${i}`}
-                                className="source-badge"
-                                onClick={() => setSelectedCitation(src)}
-                                title="View cited document passage"
-                              >
-                                <FileText size={12} />
-                                <span className="source-badge-title">{src.document_name}</span>
-                                {src.page_number !== null && (
-                                  <span className="source-badge-page">p.{src.page_number}</span>
-                                )}
-                              </button>
-                            ))}
+                            {expandedSources[m.id] && (
+                              <div className="sources-row animated-expand">
+                                {m.sources.map((src, i) => (
+                                  <button
+                                    key={src.citation_id || `${src.chunk_id}-${i}`}
+                                    className="source-badge"
+                                    onClick={() => setSelectedCitation(src)}
+                                    title="View cited document passage"
+                                  >
+                                    <FileText size={12} />
+                                    <span className="source-badge-title">{src.document_name}</span>
+                                    {src.page_number !== null && (
+                                      <span className="source-badge-page">p.{src.page_number}</span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        {/* Action Bar */}
+                        <div className="assistant-toolbar">
+                          <button
+                            className={`tool-btn ${copiedId === m.id ? "copied" : ""}`}
+                            onClick={() => handleCopy(m.id, m.content)}
+                            title="Copy answer to clipboard"
+                          >
+                            {copiedId === m.id ? (
+                              <>
+                                <Check size={12} />
+                                <span>Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={12} />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            className="tool-btn"
+                            onClick={handleRetryLast}
+                            title="Regenerate answer"
+                          >
+                            <RotateCcw size={12} />
+                            <span>Retry</span>
+                          </button>
+                        </div>
                       </div>
                     )}
-
-                    {/* Action Bar */}
-                    <div className="assistant-toolbar">
-                      <button
-                        className={`tool-btn ${copiedId === m.id ? "copied" : ""}`}
-                        onClick={() => handleCopy(m.id, m.content)}
-                        title="Copy answer to clipboard"
-                      >
-                        {copiedId === m.id ? (
-                          <>
-                            <Check size={12} />
-                            <span>Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={12} />
-                            <span>Copy</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        className="tool-btn"
-                        onClick={handleRetryLast}
-                        title="Regenerate answer"
-                      >
-                        <RotateCcw size={12} />
-                        <span>Retry</span>
-                      </button>
-                    </div>
                   </div>
-                )}
-              </div>
-            ))
-          )}
+                ))
+              )}
 
-          {/* Gentle 3-Dot Typing Pulse */}
-          {isSubmitting && (
-            <div className="message-item assistant">
-              <div className="typing-dots">
-                <span className="dot" />
-                <span className="dot" />
-                <span className="dot" />
-              </div>
+              {/* Gentle 3-Dot Typing Pulse */}
+              {isSubmitting && (
+                <div className="message-item assistant">
+                  <div className="typing-dots">
+                    <span className="dot" />
+                    <span className="dot" />
+                    <span className="dot" />
+                  </div>
+                </div>
+              )}
+
+              <div ref={chatEndRef} />
             </div>
-          )}
+          </main>
 
-          <div ref={chatEndRef} />
-        </div>
-      </main>
-
-      {/* Floating Bottom Composer */}
-      <footer className="composer-dock">
-        <div className="composer-inner">
-          <form
-            className="composer-card"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handleSubmit();
-            }}
-          >
-            <textarea
-              ref={textareaRef}
-              className="composer-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+          {/* Floating Bottom Composer */}
+          <footer className="composer-dock">
+            <div className="composer-inner">
+              <form
+                className="composer-card"
+                onSubmit={(e) => {
                   e.preventDefault();
                   void handleSubmit();
-                }
-              }}
-              placeholder="Ask anything about college…"
-              rows={1}
-              maxLength={2000}
-            />
+                }}
+              >
+                <textarea
+                  ref={textareaRef}
+                  className="composer-input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSubmit();
+                    }
+                  }}
+                  placeholder="Ask anything about college…"
+                  rows={1}
+                  maxLength={2000}
+                />
 
-            <button
-              type="submit"
-              className="send-btn"
-              disabled={!input.trim() || isSubmitting}
-              aria-label="Send query"
-              title="Send (Enter)"
-            >
-              <ArrowUp size={16} strokeWidth={2.4} />
-            </button>
-          </form>
-        </div>
-      </footer>
+                <button
+                  type="submit"
+                  className="send-btn"
+                  disabled={!input.trim() || isSubmitting}
+                  aria-label="Send query"
+                  title="Send (Enter)"
+                >
+                  <ArrowUp size={16} strokeWidth={2.4} />
+                </button>
+              </form>
+            </div>
+          </footer>
+        </>
+      ) : (
+        <FaqView
+          onAskQuestion={(q) => {
+            setActiveTab("chat");
+            void handleSubmit(q);
+          }}
+        />
+      )}
 
       {/* Citation Details Sheet Modal */}
       {selectedCitation && (
@@ -570,23 +593,16 @@ export default function App() {
                 className="drawer-handbook-btn"
                 onClick={() => {
                   setDrawerOpen(false);
-                  setCatalogOpen(true);
+                  setActiveTab("faq");
                 }}
               >
-                <BookOpen size={15} />
-                <span>Official College Handbooks</span>
+                <HelpCircle size={15} />
+                <span>Most Asked FAQs & Handbooks</span>
               </button>
             </div>
           </aside>
         </>
       )}
-
-      {/* Official College Handbooks & Knowledge Catalog Modal */}
-      <HandbookCatalogModal
-        isOpen={catalogOpen}
-        onClose={() => setCatalogOpen(false)}
-        onSelectQuestion={(q) => void handleSubmit(q)}
-      />
     </div>
   );
 }
