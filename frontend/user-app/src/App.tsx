@@ -8,17 +8,19 @@ import {
   Clock,
   Copy,
   FileText,
+  Globe,
   HelpCircle,
   History,
   MessageSquare,
   Moon,
   Plus,
   RotateCcw,
+  Sparkles,
   Sun,
   X,
 } from "lucide-react";
 import { fetchHealth, sendChatQuery } from "./services/api";
-import type { ChatTurn, HealthStatus, SourceCitation } from "./types/api";
+import type { ChatTurn, HealthStatus, SourceCitation, ExtractedEntity, SentimentData } from "./types/api";
 import { Logo } from "./components/Logo";
 import MarkdownRenderer from "./components/MarkdownRenderer";
 import { FaqView } from "./components/FaqView";
@@ -30,6 +32,10 @@ interface Message {
   sources?: SourceCitation[];
   mode?: string;
   timestamp: string;
+  language?: string;
+  topics?: string[];
+  entities?: ExtractedEntity[];
+  sentiment?: SentimentData;
 }
 
 interface ChatSession {
@@ -69,6 +75,7 @@ const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"chat" | "faq">("chat");
+  const [selectedLang, setSelectedLang] = useState<"auto" | "en" | "mr" | "hi">("auto");
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -215,6 +222,7 @@ export default function App() {
       const response = await sendChatQuery({
         message: textToSend,
         history: historyPayload,
+        language: selectedLang === "auto" ? undefined : selectedLang,
       });
 
       const assistantMsg: Message = {
@@ -224,6 +232,10 @@ export default function App() {
         sources: response.sources || [],
         mode: response.retrieval_mode,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        language: response.language,
+        topics: response.topics,
+        entities: response.entities,
+        sentiment: response.sentiment,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
@@ -298,7 +310,8 @@ export default function App() {
             onClick={() => setActiveTab("faq")}
           >
             <HelpCircle size={13} />
-            <span>Most Asked</span>
+            <span className="tab-label-full">Most Asked</span>
+            <span className="tab-label-short">FAQs</span>
           </button>
         </nav>
 
@@ -312,9 +325,9 @@ export default function App() {
             {isDark ? <Sun size={17} /> : <Moon size={17} />}
           </button>
 
-          <button className="new-chat-btn" onClick={handleNewChat}>
-            <Plus size={14} />
-            <span>New chat</span>
+          <button className="new-chat-btn" onClick={handleNewChat} title="Start new conversation">
+            <Plus size={15} />
+            <span className="new-chat-text">New chat</span>
           </button>
         </div>
       </header>
@@ -381,6 +394,65 @@ export default function App() {
                           content={m.content}
                           onCitationClick={(num) => handleCitationNumClick(num, m.sources, m.id)}
                         />
+
+                        {/* Live Extracted Institutional Entities & Topics (CO2 Demonstration) */}
+                        {((m.topics && m.topics.length > 0) || (m.entities && m.entities.length > 0) || m.sentiment) && (
+                          <div className="nlp-insights-bar">
+                            <div className="nlp-header-row">
+                              <span className="nlp-insights-tag">
+                                <Sparkles size={11} className="nlp-sparkle-icon" />
+                                <span>NLP Topics & Entities</span>
+                              </span>
+                              {m.language && m.language !== "en" && (
+                                <span className="nlp-lang-badge">
+                                  {m.language === "mr" ? "मराठी (Marathi)" : "हिंदी (Hindi)"}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Sentiment Banner if present */}
+                            {m.sentiment && (
+                              <div className={`nlp-sentiment-badge sentiment-${m.sentiment.overall_sentiment}`}>
+                                <span className="sentiment-dot" />
+                                <span className="sentiment-label">
+                                  Review Sentiment: <strong>{m.sentiment.overall_sentiment.toUpperCase()}</strong> ({m.sentiment.polarity_score > 0 ? `+${m.sentiment.polarity_score}` : m.sentiment.polarity_score})
+                                </span>
+                                {m.sentiment.aspects && m.sentiment.aspects.length > 0 && (
+                                  <span className="sentiment-aspects">
+                                    · {m.sentiment.aspects.map((a) => `${a.aspect}: ${a.sentiment}`).join(", ")}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Entities Chips */}
+                            {m.entities && m.entities.length > 0 && (
+                              <div className="nlp-entities-chips">
+                                {m.entities.map((ent, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`nlp-entity-chip cat-${ent.category.toLowerCase().replace(/_/g, "-")}`}
+                                    title={`Category: ${ent.category}`}
+                                  >
+                                    <span className="entity-cat-badge">{ent.category.replace(/_/g, " ")}</span>
+                                    <span className="entity-text">{ent.text}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* High-level Topics */}
+                            {m.topics && m.topics.length > 0 && (
+                              <div className="nlp-topics-chips">
+                                {m.topics.map((top, idx) => (
+                                  <span key={idx} className="nlp-topic-pill">
+                                    #{top}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Minimized & Expandable Source Citations */}
                         {m.sources && m.sources.length > 0 && (
@@ -474,6 +546,47 @@ export default function App() {
           {/* Floating Bottom Composer */}
           <footer className="composer-dock">
             <div className="composer-inner">
+              <div className="composer-lang-bar">
+                <span className="composer-lang-label">
+                  <Globe size={11} />
+                  <span>Language:</span>
+                </span>
+                <div className="composer-lang-options">
+                  <button
+                    type="button"
+                    className={`lang-pill ${selectedLang === "auto" ? "active" : ""}`}
+                    onClick={() => setSelectedLang("auto")}
+                    title="Auto-detect from input language"
+                  >
+                    Auto
+                  </button>
+                  <button
+                    type="button"
+                    className={`lang-pill ${selectedLang === "en" ? "active" : ""}`}
+                    onClick={() => setSelectedLang("en")}
+                    title="English"
+                  >
+                    English
+                  </button>
+                  <button
+                    type="button"
+                    className={`lang-pill ${selectedLang === "mr" ? "active" : ""}`}
+                    onClick={() => setSelectedLang("mr")}
+                    title="मराठी (Marathi)"
+                  >
+                    मराठी
+                  </button>
+                  <button
+                    type="button"
+                    className={`lang-pill ${selectedLang === "hi" ? "active" : ""}`}
+                    onClick={() => setSelectedLang("hi")}
+                    title="हिंदी (Hindi)"
+                  >
+                    हिंदी
+                  </button>
+                </div>
+              </div>
+
               <form
                 className="composer-card"
                 onSubmit={(e) => {

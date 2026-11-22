@@ -220,6 +220,14 @@ html, body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
+.tab-label-short {
+  display: none;
+}
+
+.tab-label-full {
+  display: inline;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
@@ -238,6 +246,7 @@ html, body {
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .icon-btn:hover {
@@ -261,6 +270,8 @@ html, body {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -271,6 +282,53 @@ html, body {
 
 .new-chat-btn:active {
   transform: scale(0.96);
+}
+
+/* Mobile Topbar Optimization (< 600px) */
+@media (max-width: 600px) {
+  .app-topbar {
+    padding: 0 8px;
+    gap: 6px;
+  }
+
+  .topbar-left {
+    gap: 6px;
+  }
+
+  .topbar-right {
+    gap: 4px;
+  }
+
+  .tab-switcher {
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .tab-btn {
+    padding: 5px 9px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .tab-label-full {
+    display: none;
+  }
+
+  .tab-label-short {
+    display: inline;
+  }
+
+  .new-chat-text {
+    display: none;
+  }
+
+  .new-chat-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 9px;
+  }
 }
 
 .status-dot {
@@ -2037,4 +2095,235 @@ html.dark .source-badge:hover {
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.45;
+}
+
+/* ============================================================
+   Language Selector (Composer Dock)
+   ============================================================ */
+.composer-lang-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 6px;
+  user-select: none;
+}
+
+.composer-lang-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.composer-lang-options {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 2px;
+  border-radius: 9999px;
+}
+
+.lang-pill {
+  border: none;
+  background: transparent;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lang-pill:hover {
+  color: var(--text-primary);
+}
+
+.lang-pill.active {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ============================================================
+   NLP Insights & Extracted Entities Bar (Chat Assistant Bubble)
+   ============================================================ */
+.nlp-insights-bar {
+  margin-top: 10px;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.nlp-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nlp-insights-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.nlp-sparkle-icon {
+  color: var(--accent);
+}
+
+.nlp-lang-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+html.dark .nlp-lang-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+/* Sentiment Badge */
+.nlp-sentiment-badge {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+.sentiment-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.sentiment-positive .sentiment-dot { background: #10b981; }
+.sentiment-negative .sentiment-dot { background: #ef4444; }
+.sentiment-mixed .sentiment-dot { background: #f59e0b; }
+.sentiment-neutral .sentiment-dot { background: #6b7280; }
+
+.sentiment-aspects {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* Entities Chips */
+.nlp-entities-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.nlp-entity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  transition: transform 0.15s ease;
+}
+
+.nlp-entity-chip:hover {
+  transform: translateY(-1px);
+}
+
+.entity-cat-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.entity-text {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Category Color Coding */
+.cat-regulation .entity-cat-badge {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.cat-fee .entity-cat-badge {
+  background: rgba(217, 119, 6, 0.14);
+  color: #d97706;
+}
+
+.cat-date-deadline .entity-cat-badge {
+  background: rgba(139, 92, 246, 0.14);
+  color: #7c3aed;
+}
+
+.cat-eligibility .entity-cat-badge {
+  background: rgba(13, 148, 136, 0.14);
+  color: #0d9488;
+}
+
+.cat-course .entity-cat-badge {
+  background: rgba(99, 102, 241, 0.14);
+  color: #4f46e5;
+}
+
+.cat-placement .entity-cat-badge {
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+}
+
+.cat-facility .entity-cat-badge {
+  background: rgba(100, 116, 139, 0.14);
+  color: #475569;
+}
+
+html.dark .cat-regulation .entity-cat-badge { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+html.dark .cat-fee .entity-cat-badge { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+html.dark .cat-date-deadline .entity-cat-badge { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+html.dark .cat-eligibility .entity-cat-badge { background: rgba(20, 184, 166, 0.2); color: #2dd4bf; }
+html.dark .cat-course .entity-cat-badge { background: rgba(129, 140, 248, 0.2); color: #a5b4fc; }
+html.dark .cat-placement .entity-cat-badge { background: rgba(52, 211, 153, 0.2); color: #6ee7b7; }
+html.dark .cat-facility .entity-cat-badge { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+
+/* Topics Chips */
+.nlp-topics-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.nlp-topic-pill {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  padding: 1px 4px;
 }

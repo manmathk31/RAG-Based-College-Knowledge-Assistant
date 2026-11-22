@@ -60,6 +60,7 @@ class GeminiGenerationService(BaseGenerationService):
         query: str,
         context_text: str,
         history: Optional[List[Dict[str, str]]] = None,
+        language: str = "en",
     ) -> str:
         """Generate grounded answer using Gemini API with bounded exponential retries."""
         if not self._client:
@@ -72,6 +73,11 @@ class GeminiGenerationService(BaseGenerationService):
 
         # If no context was retrieved, return standard honest grounded fallback
         if not context_text or not context_text.strip():
+            lang_clean = (language or "en").lower().strip()
+            if lang_clean in ["mr", "marathi"]:
+                return "मला अधिकृत महाविद्यालयीन कागदपत्रांमध्ये तुमच्या प्रश्नाबद्दल माहिती आढळली नाही."
+            elif lang_clean in ["hi", "hindi"]:
+                return "मुझे आधिकारिक कॉलेज दस्तावेजों में आपके प्रश्न के संबंध में जानकारी नहीं मिली।"
             return "I could not find information regarding your question in the official college documents."
 
         # Construct prompt contents
@@ -89,7 +95,24 @@ class GeminiGenerationService(BaseGenerationService):
         prompt_parts.append(context_text.strip())
         prompt_parts.append("---")
         prompt_parts.append(f"Student Question: {query.strip()}")
-        prompt_parts.append("Please provide a helpful, grounded answer citing sources with [1], [2] where appropriate:")
+
+        lang_clean = (language or "en").lower().strip()
+        if lang_clean in ["mr", "marathi"]:
+            prompt_parts.append(
+                "Language Instruction: Please answer fluently in MARATHI (मराठी). Translate the grounded facts accurately, "
+                "keeping technical/academic terms (like ESE, ISE, CGPA, ATKT, MahaDBT, TFWS) clear and recognizable. "
+                "Structure your answer with clean bullet points (•) and bold key numbers/percentages. "
+                "Retain bracketed numeric citations like [1], [2] at the end of each factual statement."
+            )
+        elif lang_clean in ["hi", "hindi"]:
+            prompt_parts.append(
+                "Language Instruction: Please answer fluently in HINDI (हिंदी). Translate the grounded facts accurately, "
+                "keeping technical/academic terms (like ESE, ISE, CGPA, ATKT, MahaDBT, TFWS) clear and recognizable. "
+                "Structure your answer with clean bullet points (•) and bold key numbers/percentages. "
+                "Retain bracketed numeric citations like [1], [2] at the end of each factual statement."
+            )
+        else:
+            prompt_parts.append("Please provide a helpful, grounded answer citing sources with [1], [2] where appropriate:")
 
         full_prompt = "\n\n".join(prompt_parts)
 
