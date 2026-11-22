@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   ArrowUp,
+  BookOpen,
   Check,
+  ChevronDown,
   Clock,
   Copy,
   FileText,
@@ -16,6 +19,7 @@ import { fetchHealth, sendChatQuery } from "./services/api";
 import type { ChatTurn, HealthStatus, SourceCitation } from "./types/api";
 import { Logo } from "./components/Logo";
 import MarkdownRenderer from "./components/MarkdownRenderer";
+import { HandbookCatalogModal } from "./components/HandbookCatalogModal";
 
 interface Message {
   id: string;
@@ -69,6 +73,12 @@ export default function App() {
   const [selectedCitation, setSelectedCitation] = useState<SourceCitation | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+
+  const toggleSources = (msgId: string) => {
+    setExpandedSources((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
+  };
 
   // Theme Management: Defaults strictly to Light Mode
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -231,8 +241,11 @@ export default function App() {
     }
   };
 
-  const handleCitationNumClick = (numStr: string, sources?: SourceCitation[]) => {
+  const handleCitationNumClick = (numStr: string, sources?: SourceCitation[], msgId?: string) => {
     if (!sources || sources.length === 0) return;
+    if (msgId) {
+      setExpandedSources((prev) => ({ ...prev, [msgId]: true }));
+    }
     const idx = parseInt(numStr, 10) - 1;
     if (sources[idx]) {
       setSelectedCitation(sources[idx]);
@@ -270,6 +283,15 @@ export default function App() {
         </div>
 
         <div className="topbar-right">
+          <button
+            className="icon-btn"
+            onClick={() => setCatalogOpen(true)}
+            aria-label="Official College Handbooks"
+            title="Official Handbooks & Knowledge Catalog"
+          >
+            <BookOpen size={17} />
+          </button>
+
           <button
             className="icon-btn"
             onClick={() => setIsDark((prev) => !prev)}
@@ -317,6 +339,21 @@ export default function App() {
                   </button>
                 ))}
               </div>
+
+              {/* Official Catalog Quick Launch */}
+              <button
+                className="catalog-launch-banner"
+                onClick={() => setCatalogOpen(true)}
+              >
+                <div className="catalog-launch-icon">
+                  <BookOpen size={15} />
+                </div>
+                <div className="catalog-launch-content">
+                  <span className="catalog-launch-title">Browse all 6 Official College Handbooks & FAQs</span>
+                  <span className="catalog-launch-sub">Attendance rules, ATKT, fees, hostels & scholarship guidelines</span>
+                </div>
+                <ArrowRight size={14} className="catalog-launch-arrow" />
+              </button>
             </div>
           ) : (
             /* Active Messages */
@@ -328,26 +365,45 @@ export default function App() {
                   <div className="assistant-body">
                     <MarkdownRenderer
                       content={m.content}
-                      onCitationClick={(num) => handleCitationNumClick(num, m.sources)}
+                      onCitationClick={(num) => handleCitationNumClick(num, m.sources, m.id)}
                     />
 
-                    {/* Source Citations Badges */}
+                    {/* Minimized & Expandable Source Citations */}
                     {m.sources && m.sources.length > 0 && (
-                      <div className="sources-row">
-                        {m.sources.map((src, i) => (
-                          <button
-                            key={src.citation_id || `${src.chunk_id}-${i}`}
-                            className="source-badge"
-                            onClick={() => setSelectedCitation(src)}
-                            title="View cited document passage"
-                          >
-                            <FileText size={12} />
-                            <span className="source-badge-title">{src.document_name}</span>
-                            {src.page_number !== null && (
-                              <span className="source-badge-page">p.{src.page_number}</span>
-                            )}
-                          </button>
-                        ))}
+                      <div className="sources-container">
+                        <button
+                          className={`sources-toggle-btn ${expandedSources[m.id] ? "expanded" : ""}`}
+                          onClick={() => toggleSources(m.id)}
+                          title={expandedSources[m.id] ? "Collapse sources" : "Expand sources consulted"}
+                        >
+                          <BookOpen size={11} className="source-toggle-icon" />
+                          <span className="source-toggle-label">
+                            {m.sources.length} {m.sources.length === 1 ? "source" : "sources"} consulted
+                          </span>
+                          <ChevronDown
+                            size={12}
+                            className={`source-toggle-chevron ${expandedSources[m.id] ? "rotated" : ""}`}
+                          />
+                        </button>
+
+                        {expandedSources[m.id] && (
+                          <div className="sources-row animated-expand">
+                            {m.sources.map((src, i) => (
+                              <button
+                                key={src.citation_id || `${src.chunk_id}-${i}`}
+                                className="source-badge"
+                                onClick={() => setSelectedCitation(src)}
+                                title="View cited document passage"
+                              >
+                                <FileText size={12} />
+                                <span className="source-badge-title">{src.document_name}</span>
+                                {src.page_number !== null && (
+                                  <span className="source-badge-page">p.{src.page_number}</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -508,9 +564,29 @@ export default function App() {
                 </button>
               </div>
             )}
+
+            <div className="drawer-catalog-box">
+              <button
+                className="drawer-handbook-btn"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  setCatalogOpen(true);
+                }}
+              >
+                <BookOpen size={15} />
+                <span>Official College Handbooks</span>
+              </button>
+            </div>
           </aside>
         </>
       )}
+
+      {/* Official College Handbooks & Knowledge Catalog Modal */}
+      <HandbookCatalogModal
+        isOpen={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        onSelectQuestion={(q) => void handleSubmit(q)}
+      />
     </div>
   );
 }
