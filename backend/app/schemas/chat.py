@@ -26,6 +26,10 @@ class ChatRequest(BaseModel):
         default=None,
         description="Alias for message for backwards compatibility with earlier client scaffolds",
     )
+    language: Optional[str] = Field(
+        default=None,
+        description="Target answer language: 'en', 'mr' (Marathi), 'hi' (Hindi), or auto-detect if None",
+    )
     history: Optional[List[ChatMessage]] = Field(
         default=None,
         max_length=10,
@@ -61,6 +65,22 @@ class ChatResponse(BaseModel):
     retrieval_mode: str = Field(
         default="hybrid",
         description="Retrieval strategy applied: 'hybrid', 'dense_only', 'keyword_only', or 'none'",
+    )
+    language: Optional[str] = Field(
+        default="en",
+        description="Language of generated answer: 'en', 'mr' (Marathi), 'hi' (Hindi)",
+    )
+    topics: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Extracted institutional topics and policy categories",
+    )
+    entities: Optional[List[dict]] = Field(
+        default_factory=list,
+        description="Extracted Named Entities (FEE, REGULATION, COURSE, DATE_DEADLINE, ELIGIBILITY)",
+    )
+    sentiment: Optional[dict] = Field(
+        default=None,
+        description="Sentiment analysis metadata if input contains student feedback",
     )
     request_id: Optional[str] = Field(
         default_factory=lambda: str(uuid.uuid4()),

@@ -50,9 +50,12 @@ class FastEmbedEmbeddingService(BaseEmbeddingService):
         batch_size: Optional[int] = None,
     ) -> List[List[float]]:
         # FastEmbed model.embed returns a generator of numpy arrays
-        bs = batch_size or getattr(self._settings, "EMBEDDING_BATCH_SIZE", 32)
+        bs = batch_size or getattr(self._settings, "EMBEDDING_BATCH_SIZE", 8)
         embeddings_gen = self._model.embed(texts, batch_size=bs)
-        return [list(vec.astype(float)) for vec in embeddings_gen]
+        res = [list(vec.astype(float)) for vec in embeddings_gen]
+        import gc
+        gc.collect()
+        return res
 
     async def embed_text(self, text: str) -> List[float]:
         """Generate embedding vector for a single text string."""

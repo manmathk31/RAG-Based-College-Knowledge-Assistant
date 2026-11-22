@@ -117,13 +117,71 @@ async def chat_query(
             detail="An error occurred while retrieving relevant college documents.",
         )
 
-    # 2. Honest Fallback if No Context Found
+    # 2. Multilingual detection & Honest Fallback if No Context Found
+    selected_lang = (payload.language or "en").lower().strip()
+    if any("\u0900" <= ch <= "\u097f" for ch in query_text):
+        if any(w in query_text for w in ["आहे", "आहेत", "काय", "उपस्थिती", "माहिती", "सांगा", "किती", "नियम", "पाहिजे"]):
+            selected_lang = "mr"
+        elif any(w in query_text for w in ["क्या", "है", "हैं", "बताएं", "जानकारी", "उपस्थिति", "कितना", "नियम"]):
+            selected_lang = "hi"
+        elif selected_lang == "en":
+            selected_lang = "mr"
+
     if not citations or not context_text.strip():
+        if selected_lang in ["mr", "marathi"]:
+            fallback_msg = "मला अधिकृत महाविद्यालयीन कागदपत्रांमध्ये तुमच्या प्रश्नाबद्दल माहिती आढळली नाही."
+        elif selected_lang in ["hi", "hindi"]:
+            fallback_msg = "मुझे आधिकारिक कॉलेज दस्तावेजों में आपके प्रश्न के संबंध में जानकारी नहीं मिली।"
+        else:
+            fallback_msg = "I could not find information regarding your question in the official college documents."
+
         return ChatResponse(
-            answer="I could not find information regarding your question in the official college documents.",
+            answer=fallback_msg,
             sources=[],
             retrieval_mode=retrieval_mode,
+            language=selected_lang,
+            topics=[],
+            entities=[],
         )
+
+    # Helper function to enrich response with NLP topics, entities, and optional sentiment
+    def enrich_nlp_metadata(answer_text: str):
+        from app.nlp.analyzer import nlp_service
+
+        extraction = nlp_service.extract_entities(answer_text)
+        extracted_entities = [
+            {"text": e.text, "category": e.category, "confidence": round(e.confidence, 2)}
+            for e in extraction.entities[:8]
+        ]
+
+        # Extract structured topics
+        category_labels = {
+            "REGULATION": "Academic Regulation",
+            "FEE": "Fee Structure & Concession",
+            "ELIGIBILITY": "Eligibility & Admission",
+            "DATE_DEADLINE": "Important Deadline",
+            "COURSE": "Course / Branch",
+            "PLACEMENT": "Placement & Career",
+            "FACILITY": "Campus Facility & Hostel",
+        }
+        topics_found = []
+        for cat, items in extraction.structured_summary.items():
+            if items and cat in category_labels:
+                topics_found.append(category_labels[cat])
+
+        # Detect if student inquiry contains feedback/sentiment
+        sentiment_data = None
+        feedback_triggers = ["mess", "food", "faculty", "hostel", "teacher", "poor", "bad", "terrible", "great", "excellent", "supportive", "rigid"]
+        if any(w in query_text.lower() for w in feedback_triggers):
+            sent_res = nlp_service.analyze_sentiment(query_text)
+            sentiment_data = {
+                "overall_sentiment": sent_res.overall_sentiment,
+                "polarity_score": round(sent_res.polarity_score, 2),
+                "aspects": [a.model_dump() for a in sent_res.aspects],
+                "summary": sent_res.summary,
+            }
+
+        return topics_found, extracted_entities, sentiment_data
 
     # 3. Grounded Generation via Gemini
     try:
@@ -132,17 +190,24 @@ async def chat_query(
             query=query_text,
             context_text=context_text,
             history=history_dicts,
+            language=selected_lang,
         )
+
+        topics_out, entities_out, sentiment_out = enrich_nlp_metadata(answer)
 
         return ChatResponse(
             answer=answer,
             sources=citations,
             retrieval_mode=retrieval_mode,
+            language=selected_lang,
+            topics=topics_out,
+            entities=entities_out,
+            sentiment=sentiment_out,
         )
 
     except GenerationAuthenticationError as exc:
         if citations and context_text:
-            logger.info("Generating grounded answer from retrieved context using local fallback synthesis.")
+            logger.info("Generating grounded answer from retrieved context using local fallback synthesis (lang=%s).", selected_lang)
             bullet_points = []
             for idx, c in enumerate(citations[:3], start=1):
                 snippet = c.snippet.strip()
@@ -150,15 +215,36 @@ async def chat_query(
                     bullet_points.append(
                         f"According to **{c.document_name}** (Page {c.page_number or '—'}, *{c.section or 'General'}*) [{idx}]:\n{snippet}"
                     )
-            synthesized = (
-                f"Here is the official college information regarding your inquiry:\n\n"
-                + "\n\n".join(bullet_points)
-                + f"\n\n*Source documents are officially registered in the MITAOE knowledge repository. Please contact the respective department office if you require further procedural details.*"
-            )
+            
+            if selected_lang in ["mr", "marathi"]:
+                synthesized = (
+                    f"महाविद्यालयाच्या अधिकृत दस्तऐवजांनुसार माहिती खालीलप्रमाणे आहे:\n\n"
+                    + "\n\n".join(bullet_points)
+                    + f"\n\n*अधिकृत माहिती MITAOE ज्ञान भांडारातून संकलित केली आहे.*"
+                )
+            elif selected_lang in ["hi", "hindi"]:
+                synthesized = (
+                    f"कॉलेज के आधिकारिक दस्तावेजों के अनुसार जानकारी निम्नलिखित है:\n\n"
+                    + "\n\n".join(bullet_points)
+                    + f"\n\n*यह आधिकारिक जानकारी MITAOE नॉलेज रिपॉजिटरी से ली गई है।* "
+                )
+            else:
+                synthesized = (
+                    f"Here is the official college information regarding your inquiry:\n\n"
+                    + "\n\n".join(bullet_points)
+                    + f"\n\n*Source documents are officially registered in the MITAOE knowledge repository. Please contact the respective department office if you require further procedural details.*"
+                )
+
+            topics_out, entities_out, sentiment_out = enrich_nlp_metadata(synthesized)
+
             return ChatResponse(
                 answer=synthesized,
                 sources=citations,
                 retrieval_mode=retrieval_mode,
+                language=selected_lang,
+                topics=topics_out,
+                entities=entities_out,
+                sentiment=sentiment_out,
             )
         logger.error("Gemini authentication failure: %s", exc)
         raise HTTPException(
