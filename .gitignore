@@ -29,6 +29,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+nltk_data/
 
 # Testing & Coverage
 .pytest_cache/
