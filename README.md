@@ -293,5 +293,4 @@ When presenting this project to evaluators and professors, follow this structure
 - **Institute:** MIT Academy of Engineering (MITAOE), Alandi, Pune  
 - **Repository:** [https://github.com/manmathk31/RAG-Based-College-Knowledge-Assistant](https://github.com/manmathk31/RAG-Based-College-Knowledge-Assistant)  
 - **Lead Developer & Maintainer:** Manmath Maroti Kornule (`202401110045@mitaoe.ac.in`)
-
-                                  Shreya Dattaram Bhosale ('202502110010@mitaoe.ac.in')
+                                   -Shreya Dattaram Bhosale (`202502110010@mitaoe.ac.in`)
