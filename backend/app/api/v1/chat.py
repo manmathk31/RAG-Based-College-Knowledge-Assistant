@@ -135,6 +135,8 @@ async def chat_query(
         else:
             fallback_msg = "I could not find information regarding your question in the official college documents."
 
+        from app.nlp.analyzer import nlp_service
+        fallback_sent = nlp_service.analyze_sentiment(query_text)
         return ChatResponse(
             answer=fallback_msg,
             sources=[],
@@ -142,6 +144,13 @@ async def chat_query(
             language=selected_lang,
             topics=[],
             entities=[],
+            sentiment={
+                "overall_sentiment": fallback_sent.overall_sentiment,
+                "polarity_score": round(fallback_sent.polarity_score, 2),
+                "confidence": round(fallback_sent.confidence, 2),
+                "aspects": [a.model_dump() for a in fallback_sent.aspects],
+                "summary": fallback_sent.summary,
+            },
         )
 
     # Helper function to enrich response with NLP topics, entities, and optional sentiment
@@ -169,17 +178,15 @@ async def chat_query(
             if items and cat in category_labels:
                 topics_found.append(category_labels[cat])
 
-        # Detect if student inquiry contains feedback/sentiment
-        sentiment_data = None
-        feedback_triggers = ["mess", "food", "faculty", "hostel", "teacher", "poor", "bad", "terrible", "great", "excellent", "supportive", "rigid"]
-        if any(w in query_text.lower() for w in feedback_triggers):
-            sent_res = nlp_service.analyze_sentiment(query_text)
-            sentiment_data = {
-                "overall_sentiment": sent_res.overall_sentiment,
-                "polarity_score": round(sent_res.polarity_score, 2),
-                "aspects": [a.model_dump() for a in sent_res.aspects],
-                "summary": sent_res.summary,
-            }
+        # Fulfill Course Outcome 2 (CO2): Always evaluate Sentiment Analysis & Aspect Polarity
+        sent_res = nlp_service.analyze_sentiment(query_text)
+        sentiment_data = {
+            "overall_sentiment": sent_res.overall_sentiment,
+            "polarity_score": round(sent_res.polarity_score, 2),
+            "confidence": round(sent_res.confidence, 2),
+            "aspects": [a.model_dump() for a in sent_res.aspects],
+            "summary": sent_res.summary,
+        }
 
         return topics_found, extracted_entities, sentiment_data
 

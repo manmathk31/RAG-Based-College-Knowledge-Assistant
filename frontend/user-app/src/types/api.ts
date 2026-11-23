@@ -43,6 +43,7 @@ export interface SentimentAspect {
 export interface SentimentData {
   overall_sentiment: string;
   polarity_score: number;
+  confidence?: number;
   aspects?: SentimentAspect[];
   summary?: string;
 }
