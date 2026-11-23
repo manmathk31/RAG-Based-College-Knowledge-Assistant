@@ -382,15 +382,15 @@ export default function App() {
                     <ArrowRight size={14} className="catalog-launch-arrow" />
                   </button>
 
-                  {/* Course Outcome 2 (CO2) Interactive Demonstration Banner */}
+                  {/* Interactive Demonstration Banner */}
                   <button
                     className="co2-test-launch-banner"
                     onClick={() => handleSubmit("The computer engineering faculty is exceptionally qualified and supportive, but the hostel mess food is disappointing and dinner quality is poor.")}
-                    title="1-Click test for Course Outcome 2 (Sentiment Analysis & Information Extraction)"
+                    title="1-Click test for Sentiment Analysis & Information Extraction"
                   >
                     <div className="co2-launch-badge">
                       <Sparkles size={13} />
-                      <span>CO2 DEMO</span>
+                      <span>NLP DEMO</span>
                     </div>
                     <div className="catalog-launch-content">
                       <span className="catalog-launch-title">Test Sentiment Analysis & Information Extraction</span>
@@ -412,13 +412,13 @@ export default function App() {
                           onCitationClick={(num) => handleCitationNumClick(num, m.sources, m.id)}
                         />
 
-                        {/* Live Extracted Institutional Entities & Topics (CO2 Demonstration) */}
+                        {/* Live Extracted Institutional Entities & Topics */}
                         {((m.topics && m.topics.length > 0) || (m.entities && m.entities.length > 0) || m.sentiment) && (
                           <div className="nlp-insights-bar">
                             <div className="nlp-header-row">
                               <span className="nlp-insights-tag">
                                 <Sparkles size={11} className="nlp-sparkle-icon" />
-                                <span>CO2: Sentiment Analysis & Information Extraction</span>
+                                <span>Sentiment & Entity Analysis</span>
                               </span>
                               {m.language && m.language !== "en" && (
                                 <span className="nlp-lang-badge">
@@ -427,7 +427,7 @@ export default function App() {
                               )}
                             </div>
 
-                            {/* Course Outcome 2 (CO2): Sentiment Analysis Evaluation */}
+                            {/* Sentiment Analysis Evaluation */}
                             {m.sentiment && (
                               <div className={`nlp-sentiment-badge sentiment-${m.sentiment.overall_sentiment}`}>
                                 <div className="sentiment-top-row">
