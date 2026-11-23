@@ -381,6 +381,23 @@ export default function App() {
                     </div>
                     <ArrowRight size={14} className="catalog-launch-arrow" />
                   </button>
+
+                  {/* Interactive Demonstration Banner */}
+                  <button
+                    className="co2-test-launch-banner"
+                    onClick={() => handleSubmit("The computer engineering faculty is exceptionally qualified and supportive, but the hostel mess food is disappointing and dinner quality is poor.")}
+                    title="1-Click test for Sentiment Analysis & Information Extraction"
+                  >
+                    <div className="co2-launch-badge">
+                      <Sparkles size={13} />
+                      <span>NLP DEMO</span>
+                    </div>
+                    <div className="catalog-launch-content">
+                      <span className="catalog-launch-title">Test Sentiment Analysis & Information Extraction</span>
+                      <span className="catalog-launch-sub">Evaluates student feedback polarity across college facets and extracts entities</span>
+                    </div>
+                    <ArrowRight size={14} className="catalog-launch-arrow" />
+                  </button>
                 </div>
               ) : (
                 /* Active Messages */
@@ -395,13 +412,13 @@ export default function App() {
                           onCitationClick={(num) => handleCitationNumClick(num, m.sources, m.id)}
                         />
 
-                        {/* Live Extracted Institutional Entities & Topics (CO2 Demonstration) */}
+                        {/* Live Extracted Institutional Entities & Topics */}
                         {((m.topics && m.topics.length > 0) || (m.entities && m.entities.length > 0) || m.sentiment) && (
                           <div className="nlp-insights-bar">
                             <div className="nlp-header-row">
                               <span className="nlp-insights-tag">
                                 <Sparkles size={11} className="nlp-sparkle-icon" />
-                                <span>NLP Topics & Entities</span>
+                                <span>Sentiment & Entity Analysis</span>
                               </span>
                               {m.language && m.language !== "en" && (
                                 <span className="nlp-lang-badge">
@@ -410,17 +427,26 @@ export default function App() {
                               )}
                             </div>
 
-                            {/* Sentiment Banner if present */}
+                            {/* Sentiment Analysis Evaluation */}
                             {m.sentiment && (
                               <div className={`nlp-sentiment-badge sentiment-${m.sentiment.overall_sentiment}`}>
-                                <span className="sentiment-dot" />
-                                <span className="sentiment-label">
-                                  Review Sentiment: <strong>{m.sentiment.overall_sentiment.toUpperCase()}</strong> ({m.sentiment.polarity_score > 0 ? `+${m.sentiment.polarity_score}` : m.sentiment.polarity_score})
-                                </span>
-                                {m.sentiment.aspects && m.sentiment.aspects.length > 0 && (
-                                  <span className="sentiment-aspects">
-                                    · {m.sentiment.aspects.map((a) => `${a.aspect}: ${a.sentiment}`).join(", ")}
+                                <div className="sentiment-top-row">
+                                  <span className="sentiment-dot" />
+                                  <span className="sentiment-label">
+                                    Sentiment: <strong>{m.sentiment.overall_sentiment.toUpperCase()}</strong> (Polarity: {m.sentiment.polarity_score >= 0 ? `+${m.sentiment.polarity_score}` : m.sentiment.polarity_score})
                                   </span>
+                                  {(!m.sentiment.aspects || m.sentiment.aspects.length === 0) && (
+                                    <span className="sentiment-subtext">· Factual Query</span>
+                                  )}
+                                </div>
+                                {m.sentiment.aspects && m.sentiment.aspects.length > 0 && (
+                                  <div className="sentiment-aspects-list">
+                                    {m.sentiment.aspects.map((asp, i) => (
+                                      <span key={i} className={`aspect-tag aspect-${asp.sentiment}`}>
+                                        {asp.aspect}: <strong>{asp.sentiment}</strong> ({asp.polarity >= 0 ? `+${asp.polarity}` : asp.polarity})
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             )}
