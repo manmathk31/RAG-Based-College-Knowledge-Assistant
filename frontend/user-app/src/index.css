@@ -555,11 +555,13 @@ html, body {
 .markdown-body {
   color: var(--text-primary);
   font-size: 15px;
-  line-height: 1.68;
+  line-height: 1.72;
+  letter-spacing: -0.005em;
 }
 
 .markdown-body .md-p {
   margin-bottom: 12px;
+  line-height: 1.72;
 }
 
 .markdown-body .md-p:last-child {
@@ -568,21 +570,145 @@ html, body {
 
 .markdown-body .md-h2, .markdown-body .md-h3, .markdown-body .md-h4 {
   font-weight: 700;
-  margin: 16px 0 8px;
+  margin: 18px 0 8px;
   color: var(--text-primary);
+  line-height: 1.35;
 }
 
 .markdown-body .md-h2 { font-size: 18px; }
 .markdown-body .md-h3 { font-size: 16px; }
-.markdown-body .md-h4 { font-size: 15px; }
+.markdown-body .md-h4 { font-size: 14.5px; }
 
-.markdown-body .md-list {
-  margin: 6px 0 12px 22px;
-  list-style-type: disc;
+.markdown-body strong {
+  font-weight: 650;
+  color: var(--text-primary);
 }
 
-.markdown-body .md-list li {
-  margin-bottom: 5px;
+.markdown-body .md-list {
+  margin: 8px 0 14px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.markdown-body .md-list-item {
+  position: relative;
+  padding-left: 20px;
+  line-height: 1.68;
+}
+
+.markdown-body .md-list-item::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+html.dark .markdown-body .md-list-item::before {
+  background: #60a5fa;
+}
+
+.markdown-body .md-list-item-content {
+  display: inline;
+}
+
+/* Modern Nested Sublist (e.g. Timings, Steps, Breakdown) */
+.markdown-body .md-sublist {
+  margin: 6px 0 4px 6px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.markdown-body .md-sublist-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-left: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-body .md-sublist-bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: 1.5px solid #64748b;
+  flex-shrink: 0;
+  transform: translateY(-2px);
+}
+
+html.dark .markdown-body .md-sublist-bullet {
+  border-color: #94a3b8;
+}
+
+.markdown-body .md-sublist-text {
+  flex: 1;
+}
+
+/* Modern Callout / Official Note Banner */
+.md-callout-card {
+  margin: 14px 0 10px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-left: 3.5px solid #2563eb;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+html.dark .md-callout-card {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(96, 165, 250, 0.22);
+  border-left-color: #60a5fa;
+}
+
+.md-callout-icon-wrap {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.md-callout-icon {
+  color: #2563eb;
+}
+
+html.dark .md-callout-icon {
+  color: #60a5fa;
+}
+
+.md-callout-content {
+  flex: 1;
+}
+
+.md-callout-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #2563eb;
+  margin-bottom: 2px;
+}
+
+html.dark .md-callout-label {
+  color: #93c5fd;
+}
+
+.md-callout-body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
 }
 
 .inline-code {
@@ -598,27 +724,40 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px 6px;
-  margin: 0 3px;
+  padding: 1px 7px;
+  margin: 0 2px;
   border-radius: 6px;
-  background: var(--source-bg);
-  border: 1px solid var(--source-border);
-  color: var(--source-text);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  color: #1d4ed8;
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
   vertical-align: baseline;
-  transition: all 0.15s ease;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .citation-pill:hover {
   transform: translateY(-1px);
-  filter: brightness(0.95);
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+html.dark .citation-pill {
+  background: rgba(96, 165, 250, 0.14);
+  border-color: rgba(96, 165, 250, 0.32);
+  color: #93c5fd;
 }
 
 html.dark .citation-pill:hover {
-  filter: brightness(1.2);
+  background: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
 /* Citations Pill Row */

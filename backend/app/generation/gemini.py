@@ -28,7 +28,15 @@ Strict Grounding Rules:
 3. If the provided excerpts do not contain sufficient information to answer the question, clearly state: "I could not find information regarding this in the official college documents."
 4. Never speculate, assume, or extrapolate facts, dates, course codes, deadlines, or fees that are not explicitly stated in the context.
 5. Distinguish explicitly stated facts from helpful general explanations.
-6. Keep responses clear, concise, well-structured, and helpful for college students."""
+6. Keep responses clear, concise, well-structured, and helpful for college students.
+
+Formatting & Typography Rules:
+- Format responses in clean, modern GitHub-style Markdown.
+- Place citation markers directly against the factual statement before ending punctuation (e.g. "dining hall [1]." or "...facility [1], and..."). NEVER leave floating spaces before punctuation like "[1] .".
+- For timings, deadlines, or attributes, format them cleanly with bold keys: "**Breakfast:** 7:30 AM – 9:00 AM [1]".
+- For sub-items (such as meal hours or breakdown under a category), indent them with 2 spaces under the parent bullet.
+- If mentioning missing information, caveats, or official notes, format as a standard markdown blockquote:
+  > **Note:** The provided documents do not contain information regarding ..."""
 
 
 class GeminiGenerationService(BaseGenerationService):
@@ -101,18 +109,21 @@ class GeminiGenerationService(BaseGenerationService):
             prompt_parts.append(
                 "Language Instruction: Please answer fluently in MARATHI (मराठी). Translate the grounded facts accurately, "
                 "keeping technical/academic terms (like ESE, ISE, CGPA, ATKT, MahaDBT, TFWS) clear and recognizable. "
-                "Structure your answer with clean bullet points (•) and bold key numbers/percentages. "
-                "Retain bracketed numeric citations like [1], [2] at the end of each factual statement."
+                "Structure your answer with clean markdown bullet points (-) and bold key numbers/percentages. "
+                "Indent sub-items with 2 spaces. Place citations directly before punctuation, e.g. '...आहे [1].'"
             )
         elif lang_clean in ["hi", "hindi"]:
             prompt_parts.append(
                 "Language Instruction: Please answer fluently in HINDI (हिंदी). Translate the grounded facts accurately, "
                 "keeping technical/academic terms (like ESE, ISE, CGPA, ATKT, MahaDBT, TFWS) clear and recognizable. "
-                "Structure your answer with clean bullet points (•) and bold key numbers/percentages. "
-                "Retain bracketed numeric citations like [1], [2] at the end of each factual statement."
+                "Structure your answer with clean markdown bullet points (-) and bold key numbers/percentages. "
+                "Indent sub-items with 2 spaces. Place citations directly before punctuation, e.g. '...है [1].'"
             )
         else:
-            prompt_parts.append("Please provide a helpful, grounded answer citing sources with [1], [2] where appropriate:")
+            prompt_parts.append(
+                "Please provide a helpful, grounded answer in modern Markdown citing sources with [1], [2]. "
+                "Use '-' for bullet points, 2-space indent for nested sub-items (like timings), and '> **Note:**' for caveats:"
+            )
 
         full_prompt = "\n\n".join(prompt_parts)
 
